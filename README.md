@@ -2,6 +2,8 @@
 
 > 任何主題都能延伸、任何議題都能協調、任何事情都有掌握、任何細節都可以持續討論。
 
+### 👉 [立即使用：https://a-tu-4-free.github.io/wanan-style/](https://a-tu-4-free.github.io/wanan-style/)
+
 輸入一個詞彙，即刻生成一段「萬安體」。純靜態網站，不使用 AI API、不需後端，所有生成都在瀏覽器端完成。
 
 **⚠ 本站所有生成內容皆為戲仿創作，不代表任何人實際發言。**
@@ -18,7 +20,7 @@
   - 電腦：一鍵複製圖片到剪貼簿，直接貼到 FB / Threads / X
   - 手機：開啟預覽，可呼叫系統分享（LINE、IG…）、下載或長按儲存
   - 圖片固定附上「戲仿創作・非本人發言」浮水印與網址
-- 🔗 **網址直接生成**：`…/wanan-style/#披薩` 開啟即生成
+- 🔗 **網址直接生成**：[`https://a-tu-4-free.github.io/wanan-style/#披薩`](https://a-tu-4-free.github.io/wanan-style/#披薩) 開啟即生成
 - 📱 支援桌面與手機瀏覽器
 
 ### 生成類型
@@ -71,7 +73,7 @@ python -m http.server 8000
 1. 建立 repo：`wanan-style`
 2. 把所有檔案推上 `main` 分支根目錄
 3. Settings → Pages → Source 選 **Deploy from a branch**，Branch 選 `main` / `/ (root)`
-4. 約 1 分鐘後即可在 `https://<帳號>.github.io/wanan-style/` 使用
+4. 約 1 分鐘後即可在 <https://a-tu-4-free.github.io/wanan-style/> 使用
 
 截圖浮水印的網址會自動抓目前網址，不需手動修改。
 
