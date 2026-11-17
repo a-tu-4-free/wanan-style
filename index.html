@@ -35,6 +35,10 @@
   </main>
 
   <footer class="composer">
+    <div class="modes" role="tablist" aria-label="生成模式">
+      <button type="button" class="mode active" data-mode="speech" role="tab" aria-selected="true">💬 萬安體</button>
+      <button type="button" class="mode" data-mode="title" role="tab" aria-selected="false">🪪 專業職稱</button>
+    </div>
     <form id="form" class="input-bar" autocomplete="off">
       <button type="button" id="btn-random" class="icon-btn" title="隨機題目" aria-label="隨機題目">🎲</button>
       <input id="input" type="text" maxlength="30" placeholder="輸入詞彙，例如：披薩、路燈、外星人" enterkeyhint="send" aria-label="輸入詞彙">
@@ -59,6 +63,7 @@
   </div>
 
   <script src="js/engine.js"></script>
+  <script src="js/title-engine.js"></script>
   <script src="js/share.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -12,7 +12,11 @@
 
 ## 功能
 
-- 💬 **對話式生成**：輸入詞彙 → 生成一段萬安體回答，並標示句型類型
+- 💬 **萬安體模式**：輸入詞彙 → 生成一段萬安體回答，並標示句型類型
+- 🪪 **專業職稱模式**：輸入市政問題 → 生成虛構的「萬安式專業職稱」，含職務定位、工作職掌、專業能力、合作單位、考核指標與記者會說明
+- ⬆ **職務升級**：同一職稱一路升級（初階 → 中階 → 高階 → 特別版）
+- 🏙 **任何題目都能市政化**：非市政題目（失戀、披薩、打電動）一樣能回答，並有機率以「市政化」開場
+- 🛑 **敏感議題不開玩笑**：涉及受害者的詞彙（可在 `phrases.json` 的 `sensitive` 調整）不生成戲仿內容
 - 🔄 **再來一版**：同一題換一種說法（自動避開上一個類型）
 - 🎲 **隨機題目**：從詞庫隨機出題
 - 📋 **複製文字**：附上提問、出處與「戲仿創作」標示
@@ -38,12 +42,14 @@ wanan-style/
 │   └── style.css            # 含 RWD
 ├── js/
 │   ├── engine.js            # 生成引擎（分類、語意延伸、句型組合、防重複）
+│   ├── title-engine.js      # 萬安式專業職稱生成器
 │   ├── share.js             # Canvas 截圖卡片、複製、分享、下載
 │   └── app.js               # 介面控制、載入詞庫
 ├── data/
 │   ├── patterns.json        # 句型模板（open / core / support / close）
 │   ├── phrases.json         # 連接詞、結尾前綴、彩蛋、政治慣用語
 │   ├── categories.json      # 主分類預設語意 + 未收錄詞分類規則
+│   ├── titles.json          # 職稱議題、職級、職掌、考核指標、記者會模板
 │   ├── topics_food.json     # 食物、飲料
 │   ├── topics_city.json     # 市政
 │   ├── topics_transport.json
@@ -153,7 +159,9 @@ python -m http.server 8000
 | 欄位 | 說明 |
 |---|---|
 | `role` | `open` 開頭、`core` 主體、`support` 補充、`close` 結尾 |
-| `tags` | `open` `immediate` `master` `crossdept` `respect` `whole` `layer` `list` `rolling` `overcome` `pro` `rebut` `vision` `full` `absurd` |
+| `tags` | `open` `immediate` `master` `crossdept` `respect` `whole` `layer` `list` `rolling` `overcome` `pro` `rebut` `vision` `full` `absurd` `civic` |
+
+> `absurd`（荒謬混搭）與 `civic`（非市政題目的市政化開場）只在指定時使用。
 | `weight` | 選填，預設 1 |
 
 可用變數：
@@ -170,6 +178,16 @@ python -m http.server 8000
 | `{act}` | 處理動作（協調、評估…） |
 | `{out}` `{out2}` | 預期成果 |
 | `{xd}` | 其他主題的細節詞（僅荒謬延伸型） |
+
+### 新增職稱議題
+
+在 `data/titles.json` 的 `issues` 加入：
+
+```json
+{ "match": ["鴿子", "鴿"], "stems": ["城市鴿群動線管理", "鴿糞落點預測"] }
+```
+
+`stems` 是職稱主幹（議題＋職能），系統會依職級自動加上前綴與後綴，例如「鴿糞落點預測師」→「全市鴿糞落點預測暨環境風險顧問」。沒收錄的議題會用「輸入詞＋職能」自動產生。
 
 ### 檢查 JSON 格式
 
