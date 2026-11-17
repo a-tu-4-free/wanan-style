@@ -258,6 +258,7 @@
     }
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
     ctx.cats = Object.keys(cats);
+    ctx.topicIds = cls.hits.filter(function (h) { return h.topic; }).map(function (h) { return h.topic.id; });
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
     ctx.noPositive = ctx.negative || noPos || !hasTopic;
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
@@ -271,7 +272,9 @@
     var out = [];
     for (var i = 0; i < n && items.length; i++) {
       var v = wpick(items, function (x) { return p[x] * (self.recent.has('d', x) ? 0.2 : 1); });
-      out.push(v); ctx.used[v] = 1; items.splice(items.indexOf(v), 1);
+      out.push(v); ctx.used[v] = 1;
+      // 避免「交流期程及期程」這種包含關係的重複
+      items = items.filter(function (x) { return x !== v && x.indexOf(v) < 0 && v.indexOf(x) < 0; });
     }
     return out;
   };
@@ -314,6 +317,7 @@
     if (p.positive && ctx.noPositive) return false;
     if (p.policy && ctx.negative) return false;
     if (p.control && ctx.noPositive) return false;
+    if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
     if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
     if (p.negOnly && !ctx.negative) return false;
@@ -348,11 +352,12 @@
     return null;
   };
 
-  WananEngine.prototype.pickStyle = function (avoid, mode) {
+  WananEngine.prototype.pickStyle = function (avoid, mode, noAbsurd) {
     var self = this;
     mode = mode || 'speech';
     return wpick(STYLES, function (s) {
       if ((s.mode || 'speech') !== mode) return 0;
+      if (s.absurd && noAbsurd) return 0;
       if (s.id === avoid) return 0;
       return s.w * (self.recent.has('s', s.id) ? 0.35 : 1);
     });
@@ -363,7 +368,11 @@
     var cls = this.classify(input);
     if (!cls.display) return null;
     var style = opts.styleId ? STYLES.filter(function (s) { return s.id === opts.styleId; })[0] : null;
-    style = style || this.pickStyle(opts.avoidStyle, opts.mode);
+    // 真實公共議題（市政、交通、政治、真實機構）不做荒謬混搭，保持基本邏輯
+    var serious = cls.hits.some(function (h) {
+      return CIVIC_CATS.indexOf(h.category) >= 0 || (h.topic && h.topic.no_positive);
+    });
+    style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious);
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
