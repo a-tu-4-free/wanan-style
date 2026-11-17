@@ -19,6 +19,8 @@
     m.sort(function (a, b) { return b.k.length - a.k.length; });
     this.match = m;
     this.lastStem = {};
+    var self = this;
+    engine.titleMaker = function (q) { return self.quickTitle(q); };
   }
 
   TitleEngine.prototype.findIssue = function (text) {
@@ -126,6 +128,15 @@
       title: title,
       text: lines.join('\n')
     };
+  };
+
+  // 給萬安體句型用的短職稱（初階／中階）
+  TitleEngine.prototype.quickTitle = function (input) {
+    var cls = this.engine.classify(input);
+    if (!cls.display) return '';
+    var issue = this.findIssue(cls.input);
+    var stem = issue ? rand(issue.stems) : cls.display + rand(['管理', '監測', '偵防', '整合', '協調']);
+    return this.makeTitle(cls.display, stem, Math.random() < 0.6 ? 1 : 2, (cls.hits[0] || {}).category || 'general');
   };
 
   TitleEngine.prototype.randomIssues = function (n) {

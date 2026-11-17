@@ -4,6 +4,9 @@
 (function () {
   'use strict';
 
+  // 更新詞庫或程式後請同步修改此版本號（index.html 的 ?v= 也要一起改），避免使用者讀到舊快取
+  var VERSION = '20261117-4';
+
   var DATA = {
     patterns: 'data/patterns.json',
     phrases: 'data/phrases.json',
@@ -33,7 +36,7 @@
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   function loadJSON(url) {
-    return fetch(url, { cache: 'no-cache' }).then(function (r) {
+    return fetch(url + '?v=' + VERSION, { cache: 'no-cache' }).then(function (r) {
       if (!r.ok) throw new Error(url + ' ' + r.status);
       return r.json();
     });

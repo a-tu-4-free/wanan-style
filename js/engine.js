@@ -192,6 +192,11 @@
       }
       return { token: tok, topic: t, category: cat };
     });
+    // 主題可設定 display_suffix，例如「法新社」→「法新社報導」、「輝達」→「輝達總部案」
+    if (hits.length === 1 && hits[0].topic && hits[0].topic.display_suffix) {
+      var sf = hits[0].topic.display_suffix;
+      if (tokens[0].indexOf(sf.slice(0, 2)) < 0) tokens[0] += sf;
+    }
     var display = tokens.length > 1
       ? tokens.slice(0, -1).join('、') + '與' + tokens[tokens.length - 1]
       : (tokens[0] || '');
@@ -218,11 +223,12 @@
       var p = ctx.pools[key] || (ctx.pools[key] = {});
       arr.forEach(function (v) { if (v && (!(v in p) || p[v] < w)) p[v] = w; });
     }
-    var cats = {}, hasTopic = false;
+    var cats = {}, hasTopic = false, noPos = false;
     cls.hits.forEach(function (h) {
       cats[h.category] = 1;
       if (!h.topic) return;
       hasTopic = true;
+      if (h.topic.no_positive) noPos = true;
       var r = h.topic.relations || {};
       add('details', [].concat(r.components || [], r.materials || [], r.equipment || [], r.processes || [], r.details || [], r.time || [], r.costs || []), 5);
       add('problems', [].concat(r.problems || [], r.risks || []), 5);
@@ -251,6 +257,10 @@
       }
     }
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
+    ctx.cats = Object.keys(cats);
+    // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
+    ctx.noPositive = ctx.negative || noPos || !hasTopic;
+    ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
   };
 
@@ -272,6 +282,7 @@
       switch (k) {
         case 'topic': return ctx.topic;
         case 'verb': return ctx.verb;
+        case 'jobtitle': return ctx.jobtitle;
         case 'd': return joinList(self.take(ctx, 'details', Math.random() < 0.6 ? 3 : 2));
         case 'd1': case 'd2': return self.take(ctx, 'details', 1)[0] || '相關細節';
         case 'obj': return self.take(ctx, 'objects', 1)[0] || '相關單位';
@@ -300,7 +311,11 @@
   WananEngine.prototype.eligible = function (p, ctx) {
     if (p.text.indexOf('{verb}') >= 0 && !ctx.verb) return false;
     if (p.text.indexOf('{xd}') >= 0 && !ctx.absurd) return false;
-    if (p.positive && ctx.negative) return false;
+    if (p.positive && ctx.noPositive) return false;
+    if (p.policy && ctx.negative) return false;
+    if (p.control && ctx.noPositive) return false;
+    if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
+    if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
     if (p.negOnly && !ctx.negative) return false;
     return true;
   };
@@ -371,7 +386,7 @@
         var pool = mode === 'angry' ? ph.angry_connectors : role === 'close' ? ph.close_prefix : ph.connectors;
         var prob = role === 'close' ? 0.25 : 0.35;
         if (pool && Math.random() < prob) {
-          var free = pool.filter(function (c) { return !state.conns[c] && s.indexOf(c.replace('，', '')) < 0; });
+          var free = pool.filter(function (c) { var w = c.replace('，', ''); return !state.conns[c] && s.indexOf(w) < 0 && state.text.indexOf(w) < 0; });
           if (free.length) {
             var c = rand(free);
             if (self.withinLimits(state.text + c + s, state)) { s = c + s; state.conns[c] = 1; }
