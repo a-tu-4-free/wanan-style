@@ -25,6 +25,7 @@
   var engine = null, titleEngine = null, busy = false, mode = 'speech';
   var PLACEHOLDER = {
     speech: '輸入詞彙，例如：披薩、路燈、外星人',
+    angry: '輸入讓人動怒的事，例如：漏水、塞車、鼠患',
     title: '輸入市政問題，例如：鼠患、停車、失戀'
   };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -81,7 +82,8 @@
   }
 
   function randomPrompts(n) {
-    return mode === 'title' ? titleEngine.randomIssues(n) : engine.randomTopics(n);
+    if (mode === 'title') return titleEngine.randomIssues(n);
+    return engine.randomTopics(n, mode === 'angry');
   }
 
   function setMode(m) {
@@ -173,15 +175,14 @@
 
   function generate(q, opts) {
     if (opts.mode === 'title') return titleEngine.generate(q, { tier: opts.tier, stem: opts.stem });
-    var r = engine.generate(q, { avoidStyle: opts.avoidStyle });
-    r.mode = 'speech';
-    return r;
+    return engine.generate(q, { avoidStyle: opts.avoidStyle, mode: opts.mode });
   }
 
   function answer(q, opts) {
     setBusy(true);
     var res = generate(q, opts);
     var ui = addBotShell();
+    if (res.mode === 'angry') ui.el.classList.add('angry');
     return sleep(reduceMotion ? 0 : 450 + Math.random() * 400).then(function () {
       ui.el.classList.remove('typing');
       ui.tag.textContent = res.style;

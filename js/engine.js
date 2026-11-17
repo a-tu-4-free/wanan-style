@@ -30,7 +30,10 @@
     { id: 'long',      name: '長篇完整說明型', w: 1.4, seq: ['open', 'core', 'support', 'core', 'support', 'close'], bonus: 1 },
     { id: 'rebut',     name: '反擊質疑型',     w: 1.5, seq: ['open:rebut', 'core', 'support:rebut', 'close'] },
     { id: 'absurd',    name: '荒謬延伸型',     w: 1.4, seq: ['open', 'core', 'core:absurd', 'close'], absurd: true },
-    { id: 'vision',    name: '願景收尾型',     w: 1.3, seq: ['open', 'core', 'support?', 'close:vision'] }
+    { id: 'vision',    name: '願景收尾型',     w: 1.3, seq: ['open', 'core', 'support?', 'close:vision'] },
+    // 動怒模式
+    { id: 'angry',     name: '動怒模式',       w: 3,   seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
+    { id: 'angry2',    name: '動怒模式・震怒', w: 1.5, seq: ['open', 'core', 'support', 'core', 'support', 'close'], mode: 'angry', bonus: 1 }
   ];
 
   // 同一段文字中的詞彙上限（D10 互斥規則）
@@ -58,7 +61,14 @@
     { re: /推動/g, max: 2 },
     { re: /克服/g, max: 1 },
     { re: /盤點/g, max: 1 },
-    { re: /研議/g, max: 1 }
+    { re: /研議/g, max: 1 },
+    { re: /現在/g, max: 3 },
+    { re: /不要給我發生/g, max: 1, fixed: true },
+    { re: /萬全準備/g, max: 1, fixed: true },
+    { re: /有沒有問題/g, max: 1 },
+    { re: /不要等到/g, max: 1, fixed: true },
+    { re: /我現在要求/g, max: 1, fixed: true },
+    { re: /站出來|心裡有數|散會/g, max: 1, fixed: true }
   ];
 
   var CONN_START = /^(所以|其實|當然|也就是說|換句話說|更重要的是|最重要的是|包括|首先|另外|同時|事實上|因此|另一方面|在這個部分|至於|如果|我要強調|我必須說|必須要說|就相關問題|這當中|總而言之|最後|我想|我必須|我要|我認為|我相信|該)/;
@@ -185,12 +195,23 @@
     var display = tokens.length > 1
       ? tokens.slice(0, -1).join('、') + '與' + tokens[tokens.length - 1]
       : (tokens[0] || '');
-    return { input: norm, display: display, hits: hits };
+    return { input: norm, display: display, hits: hits, negative: this.isNegative(norm) };
+  };
+
+  // 負面議題（漏水、塞車、鼠患…）：不套用「讓○○更好」這類正面句型
+  WananEngine.prototype.isNegative = function (text) {
+    var t = String(text || '').toLowerCase();
+    var self = this;
+    return (this.phrases.negative_words || []).some(function (w) { return t.indexOf(w) >= 0; }) ||
+      this.topics.some(function (tp) { return tp.negative && self.classifyName(tp, t); });
+  };
+  WananEngine.prototype.classifyName = function (tp, t) {
+    return [tp.name].concat(tp.keywords || []).some(function (k) { return String(k).toLowerCase() === t; });
   };
 
   WananEngine.prototype.buildContext = function (cls, absurd) {
     var self = this;
-    var ctx = { topic: cls.display, verbs: [], pools: {}, used: {}, foreign: [], absurd: !!absurd };
+    var ctx = { topic: cls.display, verbs: [], pools: {}, used: {}, foreign: [], absurd: !!absurd, negative: !!cls.negative };
     var keys = ['objects', 'details', 'problems', 'actions', 'organizations', 'outcomes'];
     function add(key, arr, w) {
       if (!arr) return;
@@ -279,13 +300,15 @@
   WananEngine.prototype.eligible = function (p, ctx) {
     if (p.text.indexOf('{verb}') >= 0 && !ctx.verb) return false;
     if (p.text.indexOf('{xd}') >= 0 && !ctx.absurd) return false;
+    if (p.positive && ctx.negative) return false;
+    if (p.negOnly && !ctx.negative) return false;
     return true;
   };
 
   WananEngine.prototype.pickSentence = function (ctx, role, tag, state) {
     var self = this;
     var base = this.patterns.filter(function (p) {
-      return p.role === role && !state.ids[p.id] && self.eligible(p, ctx) &&
+      return p.role === role && (p.mode || 'speech') === state.mode && !state.ids[p.id] && self.eligible(p, ctx) &&
         EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
     });
     var lists = [];
@@ -310,9 +333,11 @@
     return null;
   };
 
-  WananEngine.prototype.pickStyle = function (avoid) {
+  WananEngine.prototype.pickStyle = function (avoid, mode) {
     var self = this;
+    mode = mode || 'speech';
     return wpick(STYLES, function (s) {
+      if ((s.mode || 'speech') !== mode) return 0;
       if (s.id === avoid) return 0;
       return s.w * (self.recent.has('s', s.id) ? 0.35 : 1);
     });
@@ -323,12 +348,13 @@
     var cls = this.classify(input);
     if (!cls.display) return null;
     var style = opts.styleId ? STYLES.filter(function (s) { return s.id === opts.styleId; })[0] : null;
-    style = style || this.pickStyle(opts.avoidStyle);
+    style = style || this.pickStyle(opts.avoidStyle, opts.mode);
+    var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
-    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic };
+    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: mode };
     var ph = this.phrases, self = this;
-    var nonCivic = { yes: cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
+    var nonCivic = { yes: mode === 'speech' && cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
 
     style.seq.forEach(function (step) {
       var optional = step.slice(-1) === '?';
@@ -342,7 +368,7 @@
       if (!r) return;
       var s = r.text;
       if (state.parts.length > 0 && !CONN_START.test(s)) {
-        var pool = role === 'close' ? ph.close_prefix : ph.connectors;
+        var pool = mode === 'angry' ? ph.angry_connectors : role === 'close' ? ph.close_prefix : ph.connectors;
         var prob = role === 'close' ? 0.25 : 0.35;
         if (pool && Math.random() < prob) {
           var free = pool.filter(function (c) { return !state.conns[c] && s.indexOf(c.replace('，', '')) < 0; });
@@ -359,7 +385,7 @@
     });
 
     // 低機率彩蛋
-    if (ph.easter_eggs && Math.random() < 0.07) {
+    if (mode === 'speech' && ph.easter_eggs && Math.random() < 0.07) {
       var egg = rand(ph.easter_eggs);
       if (state.text.indexOf(egg.slice(0, 4)) < 0) state.parts.push(egg);
     }
@@ -375,16 +401,18 @@
       topic: cls.display,
       style: style.name,
       styleId: style.id,
+      mode: mode,
       text: text,
       category: (cls.hits[0] || {}).category,
       known: cls.hits.some(function (h) { return !!h.topic; })
     };
   };
 
-  WananEngine.prototype.randomTopics = function (n) {
+  WananEngine.prototype.randomTopics = function (n, onlyNegative) {
     var self = this;
-    var pool = this.topics.filter(function (t) { return !self.recent.has('t', t.name); });
-    if (pool.length < n) pool = this.topics.slice();
+    var all = onlyNegative ? this.topics.filter(function (t) { return self.isNegative(t.name); }) : this.topics;
+    var pool = all.filter(function (t) { return !self.recent.has('t', t.name); });
+    if (pool.length < n) pool = all.slice();
     var out = [];
     while (out.length < n && pool.length) {
       var t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
