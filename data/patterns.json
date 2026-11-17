@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "verification": "satire",
-  "notes": "所有句型均為戲仿創作模板，不代表任何人實際發言。role：open 開頭／core 主體／support 補充／close 結尾。可用變數：{topic} {verb} {d} {d1} {d2} {obj} {org} {prob} {probs} {act} {out} {out2} {xd}。tags 中 absurd、civic 只在指定時使用（civic：非市政題目的「市政化」開場）。positive：負面議題不使用；negOnly：只用於負面議題；mode=angry：動怒模式專用；cats：限定適用分類；{jobtitle}：自動產生的專業職稱；policy：題目本身是政策或計畫才適用，負面議題不用；control：暗示由市府主導，未收錄或負面題目不用",
+  "notes": "所有句型均為戲仿創作模板，不代表任何人實際發言。role：open 開頭／core 主體／support 補充／close 結尾。可用變數：{topic} {verb} {d} {d1} {d2} {obj} {org} {prob} {probs} {act} {out} {out2} {xd}。tags 中 absurd、civic 只在指定時使用（civic：非市政題目的「市政化」開場）。positive：負面議題不使用；negOnly：只用於負面議題；mode=angry：動怒模式專用；cats：限定適用分類；{jobtitle}：自動產生的專業職稱；policy：題目本身是政策或計畫才適用，負面議題不用；control：暗示由市府主導，未收錄或負面題目不用；topics：限定特定主題 id 使用",
   "patterns": [
     {"id": "o01", "role": "open", "tags": ["immediate"], "text": "針對{topic}，第一時間我們就已經掌握相關情況，並且即刻啟動相關機制。"},
     {"id": "o02", "role": "open", "tags": ["master"], "text": "關於{topic}的相關問題，我們其實都有掌握。"},
@@ -206,6 +206,17 @@
     {"id": "a_c12", "role": "core", "tags": [], "text": "{jobtitle}在哪裡？現在就站出來！", "mode": "angry"},
     {"id": "a_s10", "role": "support", "tags": [], "text": "設了{jobtitle}，不是讓你們多一個職稱而已！", "mode": "angry"},
     {"id": "o49", "role": "open", "tags": ["rebut"], "text": "針對外界對{topic}處理進度的質疑，我必須要說，我們其實一直都有在處理。", "negOnly": true},
-    {"id": "o50", "role": "open", "tags": ["rebut"], "text": "{topic}不是今天才發生的問題，而是過去長期累積下來的。", "negOnly": true}
+    {"id": "o50", "role": "open", "tags": ["rebut"], "text": "{topic}不是今天才發生的問題，而是過去長期累積下來的。", "negOnly": true},
+    {"id": "sz01", "role": "open", "tags": ["master"], "text": "社子島的問題，我們已經研議了半個世紀，接下來也會持續研議。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz02", "role": "open", "tags": ["rebut"], "text": "社子島禁限建不是今天才開始的，是從我出生之前就開始了。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz03", "role": "core", "tags": ["whole"], "text": "防洪的部分，我們會把堤防蓋得跟研議的時間一樣長。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz04", "role": "core", "tags": ["master"], "text": "生態社子島的生態，我們都有掌握，包括居民的生態。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz05", "role": "core", "tags": ["respect"], "text": "區段徵收的部分，我們尊重每一位地主，也尊重每一位地主的律師。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz06", "role": "core", "tags": ["pro"], "text": "產權與法律的部分，我們會依法處理，法院怎麼判，我們就怎麼研議。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz07", "role": "support", "tags": [], "text": "安置的部分，居民要不要搬、什麼時候搬、搬到哪裡，當然都可以再坐下來好好談。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz08", "role": "close", "tags": ["vision"], "text": "我相信，在下一個五十年之前，社子島一定會有具體的進展。", "topics": ["city_shezi"], "weight": 4},
+    {"id": "sz09", "role": "open", "tags": [], "text": "社子島等了五十年，你們還要我等到後面？現在就提出來！", "topics": ["city_shezi"], "weight": 4, "mode": "angry"},
+    {"id": "sz10", "role": "core", "tags": [], "text": "禁限建、區段徵收、安置住宅，哪一個有進度？現在就講！", "topics": ["city_shezi"], "weight": 4, "mode": "angry"},
+    {"id": "sz11", "role": "support", "tags": [], "text": "不要再跟我說「生態社子島」，我要看到的是時程表！", "topics": ["city_shezi"], "weight": 4, "mode": "angry"}
   ]
 }
