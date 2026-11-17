@@ -1,0 +1,392 @@
+/*!
+ * 萬安體製造所 — 生成引擎
+ * 流程：標準化 → 關鍵詞辨識 → 主題分類 → 語意延伸 → 句型選擇 → 組合 → 防重複
+ * 純前端、無外部依賴。所有輸出均為戲仿創作。
+ */
+(function (root) {
+  'use strict';
+
+  /* ---------- 簡轉繁（只處理常見字，供關鍵詞比對） ---------- */
+  var S2T = {
+    '这':'這','么':'麼','个':'個','们':'們','时':'時','间':'間','问':'問','题':'題','发':'發','会':'會','机':'機','场':'場',
+    '电':'電','脑':'腦','车':'車','铁':'鐵','饭':'飯','汤':'湯','鸡':'雞','猫':'貓','结':'結','觉':'覺','买':'買','宠':'寵',
+    '网':'網','络':'絡','资':'資','讯':'訊','选':'選','举':'舉','议':'議','党':'黨','预':'預','树':'樹','灯':'燈','沟':'溝',
+    '区':'區','园':'園','厕':'廁','积':'積','马':'馬','桥':'橋','线':'線','运':'運','飞':'飛','戏':'戲','乐':'樂','卖':'賣',
+    '过':'過','红':'紅','礼':'禮','饮':'飲','萨':'薩','汉':'漢','寿':'壽','烧':'燒','猪':'豬','鱼':'魚','虾':'蝦','热':'熱',
+    '学':'學','习':'習','读':'讀','书':'書','试':'試','动':'動','长':'長','开':'開','关':'關','门':'門','医':'醫','药':'藥',
+    '钱':'錢','银':'銀','业':'業','产':'產','团':'團','队':'隊','图':'圖','馆':'館','国':'國','体':'體','头':'頭','后':'後',
+    '东':'東','义':'義','脸':'臉','视':'視','频':'頻','声':'聲','应':'應','对':'對','话':'話','说':'說','点':'點','赛':'賽',
+    '篮':'籃','员':'員','厂':'廠','级':'級','厅':'廳','饺':'餃','蛋':'蛋','炉':'爐','锅':'鍋','烟':'煙','吸':'吸','垃':'垃',
+    '圾':'圾','爱':'愛','怀':'懷','约':'約','龙':'龍','灾':'災','风':'風','台':'台','湾':'灣','亚':'亞','韩':'韓','罢':'罷',
+    '众':'眾','领':'領','导':'導','纸':'紙','贵':'貴','质':'質','设':'設','备':'備','计':'計','划':'劃','环':'環','标':'標',
+    '游':'遊','双':'雙','巨':'巨','军':'軍','农':'農','养':'養','脚':'腳','踏':'踏','递':'遞','邮':'郵','岁':'歲','节':'節'
+  };
+
+  var STYLES = [
+    { id: 'standard',  name: '標準萬安體',     w: 3,   seq: ['open', 'core', 'support?', 'close'] },
+    { id: 'open',      name: '開放態度型',     w: 2.2, seq: ['open:open', 'core:open', 'core?', 'close'] },
+    { id: 'immediate', name: '即刻處理型',     w: 2,   seq: ['open:immediate', 'core:immediate', 'support', 'close'], bonus: 1 },
+    { id: 'crossdept', name: '跨局處協調型',   w: 2,   seq: ['open', 'core:crossdept', 'core?', 'support', 'close'] },
+    { id: 'long',      name: '長篇完整說明型', w: 1.4, seq: ['open', 'core', 'support', 'core', 'support', 'close'], bonus: 1 },
+    { id: 'rebut',     name: '反擊質疑型',     w: 1.5, seq: ['open:rebut', 'core', 'support:rebut', 'close'] },
+    { id: 'absurd',    name: '荒謬延伸型',     w: 1.4, seq: ['open', 'core', 'core:absurd', 'close'], absurd: true },
+    { id: 'vision',    name: '願景收尾型',     w: 1.3, seq: ['open', 'core', 'support?', 'close:vision'] }
+  ];
+
+  // 同一段文字中的詞彙上限（D10 互斥規則）
+  var LIMITS = [
+    { re: /即刻|立即|第一時間|隨即|當下/g, max: 2 },
+    { re: /持續/g, max: 2 },
+    { re: /第一時間/g, max: 1, fixed: true },
+    { re: /如果/g, max: 1, fixed: true },
+    { re: /尊重/g, max: 1, fixed: true },
+    { re: /掌握/g, max: 2 },
+    { re: /跨局處/g, max: 2 },
+    { re: /開放/g, max: 1, fixed: true },
+    { re: /只有更好/g, max: 1, fixed: true },
+    { re: /協調/g, max: 2 },
+    { re: /專案/g, max: 2 },
+    { re: /滾動檢討/g, max: 1 },
+    { re: /包括/g, max: 2 },
+    { re: /最重要的/g, max: 1 },
+    { re: /完整的?說明/g, max: 1 },
+    { re: /共識/g, max: 1 },
+    { re: /專業/g, max: 2 },
+    { re: /相關單位/g, max: 1 },
+    { re: /程序/g, max: 1 },
+    { re: /溝通/g, max: 2 },
+    { re: /推動/g, max: 2 },
+    { re: /克服/g, max: 1 },
+    { re: /盤點/g, max: 1 },
+    { re: /研議/g, max: 1 }
+  ];
+
+  var CONN_START = /^(所以|其實|當然|也就是說|換句話說|更重要的是|最重要的是|包括|首先|另外|同時|事實上|因此|另一方面|在這個部分|至於|如果|我要強調|我必須說|必須要說|就相關問題|這當中|總而言之|最後|我想|我必須|我要|我認為|我相信|該)/;
+
+  var STORE_KEY = 'wanan_recent_v1';
+
+  /* ---------- 工具 ---------- */
+  function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function wpick(items, wfn) {
+    var ws = [], tot = 0, i;
+    for (i = 0; i < items.length; i++) { var w = Math.max(0, wfn(items[i])); ws.push(w); tot += w; }
+    if (!tot) return items[Math.floor(Math.random() * items.length)];
+    var r = Math.random() * tot;
+    for (i = 0; i < items.length; i++) { r -= ws[i]; if (r <= 0) return items[i]; }
+    return items[items.length - 1];
+  }
+
+  function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+  // 英數關鍵詞需要完整詞比對，避免 "ai" 命中 "taipei"
+  function kwMatch(text, k) {
+    if (/^[a-z0-9 .+\-]+$/.test(k)) {
+      return new RegExp('(^|[^a-z0-9])' + escRe(k) + '([^a-z0-9]|$)').test(text);
+    }
+    return text.indexOf(k) >= 0;
+  }
+
+  function countAll(text, re) { var m = text.match(re); return m ? m.length : 0; }
+
+  function normalize(s) {
+    s = String(s == null ? '' : s)
+      .replace(/[！-～]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); })
+      .replace(/　/g, ' ')
+      .replace(/[\u0000-\u001f\u007f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    s = Array.from(s).map(function (c) { return S2T[c] || c; }).join('');
+    s = s.replace(/^[「『"'“‘《(（\[]+/, '').replace(/[」』"'”’》)）\]。！？!?.，,]+$/, '').trim();
+    return Array.from(s).slice(0, 30).join('');
+  }
+
+  function joinList(arr) {
+    arr = arr.filter(Boolean);
+    if (arr.length <= 1) return arr[0] || '';
+    if (arr.length === 2) return arr[0] + rand(['與', '和', '及']) + arr[1];
+    return arr.slice(0, -1).join('、') + rand(['與', '及', '，以及']) + arr[arr.length - 1];
+  }
+
+  /* ---------- 近期使用紀錄（跨次生成防重複） ---------- */
+  function Recent() {
+    this.d = { p: [], d: [], s: [], t: [] };
+    try {
+      var raw = root.localStorage && root.localStorage.getItem(STORE_KEY);
+      if (raw) { var o = JSON.parse(raw); if (o && o.p) this.d = o; }
+    } catch (e) { /* 無痕或停用 storage */ }
+  }
+  Recent.prototype.has = function (k, v) { return (this.d[k] || []).indexOf(v) >= 0; };
+  Recent.prototype.push = function (k, v, max) {
+    var a = this.d[k] || (this.d[k] = []);
+    var i = a.indexOf(v); if (i >= 0) a.splice(i, 1);
+    a.push(v); while (a.length > max) a.shift();
+  };
+  Recent.prototype.save = function () {
+    try { root.localStorage && root.localStorage.setItem(STORE_KEY, JSON.stringify(this.d)); } catch (e) { }
+  };
+
+  /* ---------- 引擎 ---------- */
+  function WananEngine(data) {
+    this.patterns = data.patterns.patterns;
+    this.phrases = data.phrases;
+    this.cats = data.categories.categories;
+    this.general = this.cats.general;
+    this.topics = data.topics;
+    this.recent = new Recent();
+
+    var kw = [];
+    this.topics.forEach(function (t) {
+      [t.name].concat(t.keywords || [], t.synonyms || []).forEach(function (k) {
+        if (k) kw.push({ k: String(k).toLowerCase(), t: t });
+      });
+    });
+    kw.sort(function (a, b) { return b.k.length - a.k.length; });
+    this.kw = kw;
+
+    var ct = [], cats = this.cats;
+    Object.keys(cats).forEach(function (c) {
+      (cats[c].match || []).forEach(function (m) { ct.push({ k: m.toLowerCase(), c: c }); });
+    });
+    ct.sort(function (a, b) { return b.k.length - a.k.length; });
+    this.catTerms = ct;
+  }
+
+  WananEngine.normalize = normalize;
+  WananEngine.STYLES = STYLES;
+
+  WananEngine.prototype.classify = function (input) {
+    var norm = normalize(input);
+    var tokens = norm.split(/[\s,，、;；/｜|＋+&]+/).filter(Boolean).slice(0, 4);
+    var self = this;
+    var hits = tokens.map(function (tok) {
+      var low = tok.toLowerCase(), t = null, i;
+      for (i = 0; i < self.kw.length; i++) if (self.kw[i].k === low) { t = self.kw[i].t; break; }
+      if (!t) for (i = 0; i < self.kw.length; i++) {
+        var k = self.kw[i].k;
+        if (k.length >= 2 && kwMatch(low, k)) { t = self.kw[i].t; break; }
+      }
+      // 輸入是關鍵詞的一部分（如「奶茶」→「珍珠奶茶」），長度差需在 2 字內
+      var len = Array.from(low).length;
+      if (!t && len >= 2) for (i = 0; i < self.kw.length; i++) {
+        var kk = self.kw[i].k;
+        if (kk.indexOf(low) >= 0 && Array.from(kk).length - len <= 2) { t = self.kw[i].t; break; }
+      }
+      var cat = t ? t.category : 'general';
+      if (!t) for (i = 0; i < self.catTerms.length; i++) {
+        if (kwMatch(low, self.catTerms[i].k)) { cat = self.catTerms[i].c; break; }
+      }
+      return { token: tok, topic: t, category: cat };
+    });
+    var display = tokens.length > 1
+      ? tokens.slice(0, -1).join('、') + '與' + tokens[tokens.length - 1]
+      : (tokens[0] || '');
+    return { input: norm, display: display, hits: hits };
+  };
+
+  WananEngine.prototype.buildContext = function (cls, absurd) {
+    var self = this;
+    var ctx = { topic: cls.display, verbs: [], pools: {}, used: {}, foreign: [], absurd: !!absurd };
+    var keys = ['objects', 'details', 'problems', 'actions', 'organizations', 'outcomes'];
+    function add(key, arr, w) {
+      if (!arr) return;
+      var p = ctx.pools[key] || (ctx.pools[key] = {});
+      arr.forEach(function (v) { if (v && (!(v in p) || p[v] < w)) p[v] = w; });
+    }
+    var cats = {}, hasTopic = false;
+    cls.hits.forEach(function (h) {
+      cats[h.category] = 1;
+      if (!h.topic) return;
+      hasTopic = true;
+      var r = h.topic.relations || {};
+      add('details', [].concat(r.components || [], r.materials || [], r.equipment || [], r.processes || [], r.details || [], r.time || [], r.costs || []), 5);
+      add('problems', [].concat(r.problems || [], r.risks || []), 5);
+      add('objects', r.objects, 4);
+      add('organizations', r.organizations, 4);
+      add('outcomes', r.outcomes, 4);
+      add('actions', r.actions, 3);
+      ctx.verbs = ctx.verbs.concat(h.topic.verbs || []);
+    });
+    Object.keys(cats).forEach(function (c) {
+      var cd = self.cats[c] || self.general;
+      if (c !== 'general') keys.forEach(function (k) { add(k, cd.relations[k], hasTopic ? 0.5 : 2.5); });
+      if (!hasTopic && cls.hits.length === 1) ctx.verbs = ctx.verbs.concat(cd.verbs || []);
+    });
+    keys.forEach(function (k) { add(k, self.general.relations[k], hasTopic ? 0.2 : 1); });
+
+    if (absurd) {
+      var myCats = Object.keys(cats);
+      var others = this.topics.filter(function (t) {
+        return myCats.indexOf(t.category) < 0 && t.relations && (t.relations.details || []).length;
+      });
+      if (others.length) {
+        var ft = rand(others);
+        ctx.foreign = ft.relations.details.slice().sort(function () { return Math.random() - 0.5; });
+        add('details', ctx.foreign.splice(0, 1), 3);
+      }
+    }
+    ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
+    return ctx;
+  };
+
+  WananEngine.prototype.take = function (ctx, key, n) {
+    var p = ctx.pools[key] || {}, self = this;
+    var items = Object.keys(p).filter(function (v) { return !ctx.used[v]; });
+    if (!items.length) items = Object.keys(p);
+    var out = [];
+    for (var i = 0; i < n && items.length; i++) {
+      var v = wpick(items, function (x) { return p[x] * (self.recent.has('d', x) ? 0.2 : 1); });
+      out.push(v); ctx.used[v] = 1; items.splice(items.indexOf(v), 1);
+    }
+    return out;
+  };
+
+  WananEngine.prototype.fill = function (tpl, ctx) {
+    var self = this;
+    return tpl.replace(/\{(\w+)\}/g, function (m, k) {
+      switch (k) {
+        case 'topic': return ctx.topic;
+        case 'verb': return ctx.verb;
+        case 'd': return joinList(self.take(ctx, 'details', Math.random() < 0.6 ? 3 : 2));
+        case 'd1': case 'd2': return self.take(ctx, 'details', 1)[0] || '相關細節';
+        case 'obj': return self.take(ctx, 'objects', 1)[0] || '相關單位';
+        case 'org': return self.take(ctx, 'organizations', 1)[0] || '相關局處';
+        case 'prob': return self.take(ctx, 'problems', 1)[0] || '相關問題';
+        case 'probs': return joinList(self.take(ctx, 'problems', 2)) || '相關問題';
+        case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
+        case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
+        case 'xd':
+          var xs = ctx.foreign.splice(0, Math.random() < 0.5 ? 2 : 1);
+          xs.forEach(function (x) { ctx.used[x] = 1; });
+          return joinList(xs) || joinList(self.take(ctx, 'details', 2));
+        default: return m;
+      }
+    });
+  };
+
+  WananEngine.prototype.withinLimits = function (text, state) {
+    for (var i = 0; i < LIMITS.length; i++) {
+      if (countAll(text, LIMITS[i].re) > LIMITS[i].max + (LIMITS[i].fixed ? 0 : state.bonus)) return false;
+    }
+    var tc = text.split(state.topic).length - 1;
+    return tc <= 2 + state.bonus;
+  };
+
+  WananEngine.prototype.eligible = function (p, ctx) {
+    if (p.text.indexOf('{verb}') >= 0 && !ctx.verb) return false;
+    if (p.text.indexOf('{xd}') >= 0 && !ctx.absurd) return false;
+    return true;
+  };
+
+  WananEngine.prototype.pickSentence = function (ctx, role, tag, state) {
+    var self = this;
+    var base = this.patterns.filter(function (p) {
+      return p.role === role && !state.ids[p.id] && self.eligible(p, ctx) &&
+        (tag === 'absurd' || (p.tags || []).indexOf('absurd') < 0);
+    });
+    var lists = [];
+    if (tag) lists.push(base.filter(function (p) { return (p.tags || []).indexOf(tag) >= 0; }));
+    lists.push(base);
+
+    for (var li = 0; li < lists.length; li++) {
+      var cands = lists[li].slice();
+      for (var tries = 0; tries < 14 && cands.length; tries++) {
+        var p = wpick(cands, function (x) {
+          var w = (x.weight || 1) * (self.recent.has('p', x.id) ? 0.1 : 1);
+          (x.tags || []).forEach(function (t) { if (state.tags[t]) w *= 0.4; });
+          return w;
+        });
+        var snapshot = Object.assign({}, ctx.used), fSnap = ctx.foreign.slice();
+        var text = this.fill(p.text, ctx);
+        if (this.withinLimits(state.text + text, state)) return { p: p, text: text };
+        ctx.used = snapshot; ctx.foreign = fSnap;
+        cands.splice(cands.indexOf(p), 1);
+      }
+    }
+    return null;
+  };
+
+  WananEngine.prototype.pickStyle = function (avoid) {
+    var self = this;
+    return wpick(STYLES, function (s) {
+      if (s.id === avoid) return 0;
+      return s.w * (self.recent.has('s', s.id) ? 0.35 : 1);
+    });
+  };
+
+  WananEngine.prototype.generate = function (input, opts) {
+    opts = opts || {};
+    var cls = this.classify(input);
+    if (!cls.display) return null;
+    var style = opts.styleId ? STYLES.filter(function (s) { return s.id === opts.styleId; })[0] : null;
+    style = style || this.pickStyle(opts.avoidStyle);
+
+    var ctx = this.buildContext(cls, style.absurd);
+    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic };
+    var ph = this.phrases, self = this;
+
+    style.seq.forEach(function (step) {
+      var optional = step.slice(-1) === '?';
+      var sp = step.replace('?', '').split(':');
+      var role = sp[0], tag = sp[1] || null;
+      if (optional && Math.random() < 0.5) return;
+      var r = self.pickSentence(ctx, role, tag, state);
+      if (!r) return;
+      var s = r.text;
+      if (state.parts.length > 0 && !CONN_START.test(s)) {
+        var pool = role === 'close' ? ph.close_prefix : ph.connectors;
+        var prob = role === 'close' ? 0.25 : 0.35;
+        if (pool && Math.random() < prob) {
+          var free = pool.filter(function (c) { return !state.conns[c] && s.indexOf(c.replace('，', '')) < 0; });
+          if (free.length) {
+            var c = rand(free);
+            if (self.withinLimits(state.text + c + s, state)) { s = c + s; state.conns[c] = 1; }
+          }
+        }
+      }
+      state.parts.push(s);
+      state.text += s;
+      state.ids[r.p.id] = 1;
+      (r.p.tags || []).forEach(function (t) { state.tags[t] = 1; });
+    });
+
+    // 低機率彩蛋
+    if (ph.easter_eggs && Math.random() < 0.07) {
+      var egg = rand(ph.easter_eggs);
+      if (state.text.indexOf(egg.slice(0, 4)) < 0) state.parts.push(egg);
+    }
+
+    var text = state.parts.join('');
+    Object.keys(state.ids).forEach(function (id) { self.recent.push('p', id, 45); });
+    Object.keys(ctx.used).forEach(function (v) { self.recent.push('d', v, 90); });
+    this.recent.push('s', style.id, 2);
+    this.recent.save();
+
+    return {
+      question: cls.input,
+      topic: cls.display,
+      style: style.name,
+      styleId: style.id,
+      text: text,
+      category: (cls.hits[0] || {}).category,
+      known: cls.hits.some(function (h) { return !!h.topic; })
+    };
+  };
+
+  WananEngine.prototype.randomTopics = function (n) {
+    var self = this;
+    var pool = this.topics.filter(function (t) { return !self.recent.has('t', t.name); });
+    if (pool.length < n) pool = this.topics.slice();
+    var out = [];
+    while (out.length < n && pool.length) {
+      var t = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+      out.push(t.name);
+    }
+    return out;
+  };
+
+  WananEngine.prototype.markTopic = function (name) { this.recent.push('t', name, 40); this.recent.save(); };
+
+  root.WananEngine = WananEngine;
+  if (typeof module !== 'undefined' && module.exports) module.exports = WananEngine;
+})(typeof window !== 'undefined' ? window : globalThis);
