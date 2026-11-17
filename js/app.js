@@ -8,6 +8,7 @@
     patterns: 'data/patterns.json',
     phrases: 'data/phrases.json',
     categories: 'data/categories.json',
+    titles: 'data/titles.json',
     topics: [
       'data/topics_food.json',
       'data/topics_city.json',
@@ -21,7 +22,11 @@
   var $ = function (s) { return document.querySelector(s); };
   var chat = $('#chat'), messages = $('#messages'), welcome = $('#welcome');
   var form = $('#form'), input = $('#input'), sendBtn = $('#btn-send');
-  var engine = null, busy = false;
+  var engine = null, titleEngine = null, busy = false, mode = 'speech';
+  var PLACEHOLDER = {
+    speech: '輸入詞彙，例如：披薩、路燈、外星人',
+    title: '輸入市政問題，例如：鼠患、停車、失戀'
+  };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
@@ -37,11 +42,11 @@
     if (window.__WANAN_DATA__) return Promise.resolve(window.__WANAN_DATA__); // 單檔預覽版用
     return Promise.all([
       loadJSON(DATA.patterns), loadJSON(DATA.phrases), loadJSON(DATA.categories),
-      Promise.all(DATA.topics.map(loadJSON))
+      loadJSON(DATA.titles), Promise.all(DATA.topics.map(loadJSON))
     ]).then(function (r) {
       return {
-        patterns: r[0], phrases: r[1], categories: r[2],
-        topics: r[3].reduce(function (all, f) { return all.concat(f.topics || []); }, [])
+        patterns: r[0], phrases: r[1], categories: r[2], titles: r[3],
+        topics: r[4].reduce(function (all, f) { return all.concat(f.topics || []); }, [])
       };
     });
   }
@@ -67,12 +72,32 @@
   function renderExamples() {
     var wrap = $('#examples');
     wrap.innerHTML = '';
-    engine.randomTopics(8).forEach(function (name) {
+    randomPrompts(8).forEach(function (name) {
       var b = document.createElement('button');
       b.type = 'button'; b.className = 'chip'; b.textContent = name;
       b.addEventListener('click', function () { ask(name); });
       wrap.appendChild(b);
     });
+  }
+
+  function randomPrompts(n) {
+    return mode === 'title' ? titleEngine.randomIssues(n) : engine.randomTopics(n);
+  }
+
+  function setMode(m) {
+    mode = m;
+    document.querySelectorAll('.mode').forEach(function (b) {
+      var on = b.getAttribute('data-mode') === m;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    input.placeholder = PLACEHOLDER[m];
+    if (engine && !welcome.hidden) renderExamples();
+  }
+
+  function isSensitive(q) {
+    var s = engine.phrases.sensitive;
+    return s && s.words.some(function (w) { return q.indexOf(w) >= 0; });
   }
 
   /* ---------- 訊息 ---------- */
@@ -134,13 +159,28 @@
     welcome.hidden = true;
     $('#btn-clear').hidden = false;
     addUser(q);
+    if (isSensitive(q)) { replyPlain(engine.phrases.sensitive.reply); return; }
     engine.markTopic(q);
-    answer(q);
+    answer(q, { mode: mode });
   }
 
-  function answer(q, avoidStyle) {
+  function replyPlain(text) {
+    var ui = addBotShell();
+    ui.el.classList.remove('typing');
+    ui.text.textContent = text;
+    scrollBottom();
+  }
+
+  function generate(q, opts) {
+    if (opts.mode === 'title') return titleEngine.generate(q, { tier: opts.tier, stem: opts.stem });
+    var r = engine.generate(q, { avoidStyle: opts.avoidStyle });
+    r.mode = 'speech';
+    return r;
+  }
+
+  function answer(q, opts) {
     setBusy(true);
-    var res = engine.generate(q, { avoidStyle: avoidStyle });
+    var res = generate(q, opts);
     var ui = addBotShell();
     return sleep(reduceMotion ? 0 : 450 + Math.random() * 400).then(function () {
       ui.el.classList.remove('typing');
@@ -149,8 +189,15 @@
     }).then(function () {
       ui.actions.appendChild(actionBtn('📋 複製文字', '', function () { onCopyText(res); }));
       ui.actions.appendChild(actionBtn('📸 截圖分享', 'primary', function () { onShot(res); }));
+      if (res.mode === 'title') {
+        ui.actions.appendChild(actionBtn('⬆ 職務升級', '', function () {
+          if (busy) return;
+          if (res.tier >= 4) { toast('已是最高職級，更高職級的設置持續研議中'); return; }
+          answer(res.question, { mode: 'title', tier: res.tier + 1, stem: res.stem });
+        }));
+      }
       ui.actions.appendChild(actionBtn('🔄 再來一版', '', function () {
-        if (!busy) answer(res.question, res.styleId);
+        if (!busy) answer(res.question, { mode: res.mode, avoidStyle: res.styleId });
       }));
       ui.actions.hidden = false;
       scrollBottom();
@@ -214,7 +261,11 @@
 
   $('#btn-random').addEventListener('click', function () {
     if (!engine || busy) return;
-    ask(engine.randomTopics(1)[0]);
+    ask(randomPrompts(1)[0]);
+  });
+
+  document.querySelectorAll('.mode').forEach(function (b) {
+    b.addEventListener('click', function () { setMode(b.getAttribute('data-mode')); input.focus(); });
   });
 
   $('#btn-clear').addEventListener('click', function () {
@@ -228,6 +279,7 @@
   /* ---------- 啟動 ---------- */
   loadData().then(function (data) {
     engine = new WananEngine(data);
+    titleEngine = new WananTitleEngine(engine, data.titles);
     renderExamples();
     var hash = decodeURIComponent((location.hash || '').slice(1));
     if (hash) ask(hash); // 支援 #披薩 直接生成

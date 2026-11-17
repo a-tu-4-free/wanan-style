@@ -65,6 +65,10 @@
 
   var STORE_KEY = 'wanan_recent_v1';
 
+  // 只在指定時使用的標籤：absurd 荒謬混搭、civic 非市政題目的「市政化」開場
+  var EXCLUSIVE = ['absurd', 'civic'];
+  var CIVIC_CATS = ['city', 'transport', 'politics'];
+
   /* ---------- 工具 ---------- */
   function rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -282,7 +286,7 @@
     var self = this;
     var base = this.patterns.filter(function (p) {
       return p.role === role && !state.ids[p.id] && self.eligible(p, ctx) &&
-        (tag === 'absurd' || (p.tags || []).indexOf('absurd') < 0);
+        EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
     });
     var lists = [];
     if (tag) lists.push(base.filter(function (p) { return (p.tags || []).indexOf(tag) >= 0; }));
@@ -324,11 +328,15 @@
     var ctx = this.buildContext(cls, style.absurd);
     var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic };
     var ph = this.phrases, self = this;
+    var nonCivic = { yes: cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
 
     style.seq.forEach(function (step) {
       var optional = step.slice(-1) === '?';
       var sp = step.replace('?', '').split(':');
       var role = sp[0], tag = sp[1] || null;
+      // 非市政題目：開場有機會先「市政化」
+      if (role === 'open' && !tag && !nonCivic.done && nonCivic.yes && Math.random() < 0.45) tag = 'civic';
+      if (role === 'open') nonCivic.done = true;
       if (optional && Math.random() < 0.5) return;
       var r = self.pickSentence(ctx, role, tag, state);
       if (!r) return;

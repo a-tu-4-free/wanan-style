@@ -65,10 +65,17 @@
     var qH = qLines.length * qLH + qPad * 2 - 6;
 
     var av = 76, gap = 22, bx = P + av + gap, bw = W - P - bx, aPad = 36, aLH = 66;
-    ctx.font = aFont;
-    var aLines = wrap(ctx, a, bw - aPad * 2);
+    // 逐段換行；【職稱】與 ▍標題用粗體，空行只佔半行
+    var aBold = '700 38px ' + FONT, aTitle = '700 44px ' + FONT;
+    var aLines = [], aTextH = 0;
+    String(a).split('\n').forEach(function (para) {
+      if (!para.trim()) { aLines.push({ t: '', h: aLH / 2 }); aTextH += aLH / 2; return; }
+      var f = /^【/.test(para) ? aTitle : /^▍/.test(para) ? aBold : aFont;
+      ctx.font = f;
+      wrap(ctx, para, bw - aPad * 2).forEach(function (l) { aLines.push({ t: l, f: f, h: aLH }); aTextH += aLH; });
+    });
     var tagH = tag ? 58 : 0;
-    var aH = aPad + tagH + aLines.length * aLH + aPad - 10;
+    var aH = aPad + tagH + aTextH + aPad - 10;
 
     var headH = 84, footH = 104;
     var H = P + headH + 56 + qH + 44 + aH + 56 + footH;
@@ -104,8 +111,11 @@
       ctx.fillStyle = C.red; ctx.fillText(tag, bx + aPad + 16, ty + 30);
       ty += tagH;
     }
-    ctx.fillStyle = C.ink; ctx.font = aFont;
-    aLines.forEach(function (l, i) { ctx.fillText(l, bx + aPad, ty + 44 + i * aLH); });
+    ctx.fillStyle = C.ink;
+    aLines.forEach(function (l) {
+      if (l.t) { ctx.font = l.f; ctx.fillStyle = l.f === aTitle ? C.red : C.ink; ctx.fillText(l.t, bx + aPad, ty + 44); }
+      ty += l.h;
+    });
     y += aH + 56;
 
     // 頁尾浮水印
