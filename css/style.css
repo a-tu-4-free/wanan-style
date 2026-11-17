@@ -170,6 +170,9 @@ button { font-family: inherit; cursor: pointer; }
   font-weight: 600;
 }
 .mode.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.mode.active[data-mode="angry"] { background: var(--red); border-color: var(--red); }
+.msg.bot.angry .bubble { border-color: #f0b8c1; background: #fffafa; }
+.msg.bot.angry .tag { background: var(--red); color: #fff; }
 
 /* 輸入列 */
 .composer {
