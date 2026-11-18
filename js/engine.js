@@ -77,6 +77,19 @@
     { re: /親自/g, max: 2, fixed: true },
     { re: /關鍵/g, max: 3, fixed: true },
     { re: /我很好奇|匪夷所思/g, max: 1, fixed: true },
+    { re: /相關團隊/g, max: 1, fixed: true },
+    { re: /即刻召集/g, max: 1, fixed: true },
+    { re: /已有相關討論/g, max: 1, fixed: true },
+    { re: /當然/g, max: 2, fixed: true },
+    { re: /從制度面/g, max: 1, fixed: true },
+    { re: /我們已召開/g, max: 1, fixed: true },
+    { re: /我要看到/g, max: 1, fixed: true },
+    { re: /現在就提出來/g, max: 1, fixed: true },
+    { re: /都有掌握/g, max: 1, fixed: true },
+    { re: /跨局處協調/g, max: 1, fixed: true },
+    { re: /符合市民期待/g, max: 1, fixed: true },
+    { re: /不要再跟我說|不要跟我說/g, max: 1, fixed: true },
+    { re: /現在有沒有問題/g, max: 1, fixed: true },
     { re: /身為市長/g, max: 1, fixed: true },
     { re: /我現在要求/g, max: 1, fixed: true },
     { re: /站出來|心裡有數|散會/g, max: 1, fixed: true }
@@ -255,6 +268,7 @@
       add('actions', r.actions, 3);
       ctx.verbs = ctx.verbs.concat(h.topic.verbs || []);
       if (h.topic.metrics) ctx.metrics = (ctx.metrics || []).concat(h.topic.metrics);
+      if (h.topic.slogans) ctx.slogans = (ctx.slogans || []).concat(h.topic.slogans);
     });
     Object.keys(cats).forEach(function (c) {
       var cd = self.cats[c] || self.general;
@@ -281,13 +295,19 @@
     ctx.noPositive = ctx.negative || noPos || !hasTopic;
     ctx.serious = noPos;
     ctx.viaTitle = cls.hits.some(function (h) { return h.viaTitle; });
+    ctx.central = cls.hits.some(function (h) { return h.topic && h.topic.central; });
+    ctx.personal = cls.hits.every(function (h) { return ['life', 'food', 'drink', 'entertainment'].indexOf(h.category) >= 0; });
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
   };
 
   WananEngine.prototype.take = function (ctx, key, n) {
     var p = ctx.pools[key] || {}, self = this;
-    var items = Object.keys(p).filter(function (v) { return !ctx.used[v]; });
+    // 已用過的詞不再抽，也排除互相包含的詞（煮製時間／時間）
+    var usedList = Object.keys(ctx.used);
+    var items = Object.keys(p).filter(function (v) {
+      return !ctx.used[v] && !usedList.some(function (u) { return u.indexOf(v) >= 0 || v.indexOf(u) >= 0; });
+    });
     if (!items.length) items = Object.keys(p);
     var out = [];
     for (var i = 0; i < n && items.length; i++) {
@@ -318,7 +338,10 @@
         case 'tool': return tpl.indexOf('{metric}') >= 0 ? getMetric()[1] : rand(self.phrases.instruments || ['精密儀器']);
         case 'metric': return getMetric()[0];
         case 'friend': return rand(self.phrases.friends || ['多年好友']);
-        case 'slogan': return rand(self.phrases.slogans || ['幸福城市']);
+        case 'slogan':
+          // 口號要跟題目同類：主題指定 > 分類 > 通用（避免「做家事」配「安全校園」）
+          var sl = self.phrases.slogans || {};
+          return rand(ctx.slogans || (Array.isArray(sl) ? sl : (sl[(ctx.cats || [])[0]] || sl.general || ['幸福城市'])));
         case 'd': return joinList(self.take(ctx, 'details', Math.random() < 0.6 ? 3 : 2));
         case 'd1': case 'd2': return self.take(ctx, 'details', 1)[0] || '相關細節';
         case 'obj': return self.take(ctx, 'objects', 1)[0] || '相關單位';
@@ -354,6 +377,8 @@
     if (p.policy && ctx.negative) return false;
     if (p.light && ctx.serious) return false;
     if (p.eventTopic && ctx.viaTitle) return false;
+    // 「中央不做地方來做」這類：題目真的牽涉中央，或是明顯荒謬的生活題才用
+    if (p.needCentral && !ctx.central && !ctx.personal) return false;
     if (p.control && ctx.noPositive) return false;
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
@@ -366,6 +391,7 @@
     var self = this;
     var base = this.patterns.filter(function (p) {
       return p.role === role && (p.mode || 'speech') === state.mode && !state.ids[p.id] && self.eligible(p, ctx) &&
+        !(p.group && state.groups[p.group]) &&
         EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
     });
     var lists = [];
@@ -415,7 +441,7 @@
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
-    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: style.patternMode || mode };
+    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: style.patternMode || mode, groups: {} };
     var ph = this.phrases, self = this;
     var nonCivic = { yes: mode === 'speech' && !style.patternMode && cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
 
@@ -434,7 +460,7 @@
         var pool = mode === 'angry' ? ph.angry_connectors : role === 'close' ? ph.close_prefix : ph.connectors;
         var prob = role === 'close' ? 0.25 : 0.35;
         if (pool && Math.random() < prob) {
-          var free = pool.filter(function (c) { var w = c.replace('，', ''); return !state.conns[c] && s.indexOf(w) < 0 && state.text.indexOf(w) < 0; });
+          var free = pool.filter(function (c) { var w = c.replace('，', ''); return !state.conns[c] && s.indexOf(w) < 0 && state.text.indexOf(w) < 0 && s.slice(0, 6).indexOf(w.slice(-3)) < 0; });
           if (free.length) {
             var c = rand(free);
             if (self.withinLimits(state.text + c + s, state)) { s = c + s; state.conns[c] = 1; }
@@ -444,6 +470,7 @@
       state.parts.push(s);
       state.text += s;
       state.ids[r.p.id] = 1;
+      if (r.p.group) state.groups[r.p.group] = 1;
       (r.p.tags || []).forEach(function (t) { state.tags[t] = 1; });
     });
 
@@ -469,7 +496,8 @@
       mode: mode,
       text: text,
       category: (cls.hits[0] || {}).category,
-      known: cls.hits.some(function (h) { return !!h.topic; })
+      known: cls.hits.some(function (h) { return !!h.topic; }),
+      used: Object.keys(ctx.used)
     };
   };
 
