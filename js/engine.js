@@ -441,6 +441,7 @@
       if (p.text.indexOf('{dfig}') >= 0 && !dx.figure) return false;
       if (p.needMoney && !dx.money) return false;
       if (p.needDneg && dx.kind !== 'negative') return false;
+      if (p.needSpin && !dx.spin) return false;
     }
     if (p.negOnly && !ctx.negative) return false;
     return true;
@@ -451,6 +452,7 @@
     var base = this.patterns.filter(function (p) {
       return p.role === role && (p.mode || 'speech') === state.mode && !state.ids[p.id] && self.eligible(p, ctx) &&
         !(p.group && state.groups[p.group]) &&
+        !(p.needMention && !(ctx.deflect && state.text.indexOf(ctx.deflect.city) >= 0)) &&
         EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
     });
     var lists = [];
