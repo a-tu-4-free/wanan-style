@@ -37,8 +37,8 @@
     { id: 'full',      name: '完整萬安體',     w: 1.8, seq: ['open:emergency', 'core:personal', 'core:visit', 'support:system', 'core:data?', 'close:grand'], bonus: 1 },
     { id: 'debate',    name: '議會答詢型',     w: 1.4, seq: ['open', 'core:data', 'core:rebut2', 'support?', 'close:grand'] },
     { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
-    { id: 'deflect',   name: '問A答B型',       w: 5, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
-    { id: 'cut',       name: '事件切割型',     w: 2,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
+    { id: 'deflect',   name: '問A答B型',       w: 8, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
+    { id: 'cut',       name: '事件切割型',     w: 3,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
     // 強硬模式（內部代號 angry）：六種語氣 + 綜合型
@@ -478,12 +478,13 @@
     return null;
   };
 
-  WananEngine.prototype.pickStyle = function (avoid, mode, noAbsurd) {
+  WananEngine.prototype.pickStyle = function (avoid, mode, noAbsurd, boost) {
     var self = this;
     mode = mode || 'speech';
     return wpick(STYLES, function (s) {
       if ((s.mode || 'speech') !== mode) return 0;
       if (s.absurd && noAbsurd) return 0;
+      if (boost && (s.id === 'deflect' || s.id === 'cut' || s.id === 'h_deflect')) return s.w * 7;
       if (s.id === avoid) return 0;
       return s.w * (self.recent.has('s', s.id) ? 0.35 : 1);
     });
@@ -498,7 +499,9 @@
     var serious = cls.hits.some(function (h) {
       return CIVIC_CATS.indexOf(h.category) >= 0 || (h.topic && h.topic.no_positive);
     });
-    style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious);
+    // 主題設定 deflect_boost（如遮陽傘）時，大幅提高問A答B出現機率
+    var boost = cls.hits.some(function (h) { return h.topic && h.topic.deflect_boost; });
+    style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious, boost);
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
