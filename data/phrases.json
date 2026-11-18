@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "notes": "connectors 用於中段句子前綴；close_prefix 用於結尾前綴；easter_eggs 為低機率彩蛋；political_phrases 供未來濃度測試使用。；angry_connectors 為動怒模式連接詞；negative_words 用於判斷負面議題；instruments／friends／slogans 供 {tool} {friend} {slogan} 變數使用；metrics：各分類可測量的項目與對應儀器，供 {metric} {tool} 使用",
+  "notes": "connectors 用於中段句子前綴；close_prefix 用於結尾前綴；easter_eggs 為低機率彩蛋；political_phrases 供未來濃度測試使用。；angry_connectors 為動怒模式連接詞；negative_words 用於判斷負面議題；instruments／friends／slogans 供 {tool} {friend} {slogan} 變數使用；metrics：各分類可測量的項目與對應儀器，供 {metric} {tool} 使用；slogans 依分類挑選，主題可用 slogans 欄位指定（如營養午餐→安全校園）",
   "connectors": [
     "同時，",
     "另外，",
@@ -365,16 +365,50 @@
     "以前在矽谷的同事",
     "高中學長"
   ],
-  "slogans": [
-    "幸福城市",
-    "宜居城市",
-    "友善城市",
-    "安全校園",
-    "生生喝鮮乳",
-    "人人有電腦",
-    "智慧城市",
-    "永續城市"
-  ],
+  "slogans": {
+    "city": [
+      "幸福城市",
+      "宜居城市",
+      "友善城市",
+      "永續城市"
+    ],
+    "transport": [
+      "友善城市",
+      "安全城市",
+      "智慧城市"
+    ],
+    "politics": [
+      "透明政府",
+      "開放政府",
+      "幸福城市"
+    ],
+    "food": [
+      "食在安心",
+      "幸福城市"
+    ],
+    "drink": [
+      "食在安心",
+      "健康城市"
+    ],
+    "life": [
+      "幸福家庭",
+      "樂活城市",
+      "幸福城市"
+    ],
+    "tech": [
+      "智慧城市",
+      "人人有電腦",
+      "數位城市"
+    ],
+    "entertainment": [
+      "活力城市",
+      "幸福城市"
+    ],
+    "general": [
+      "幸福城市",
+      "宜居城市"
+    ]
+  },
   "metrics": {
     "food": [
       [
