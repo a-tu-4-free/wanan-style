@@ -82,7 +82,12 @@
       var q = j.match(/「(.+?)」/);
       return !q || ownText.indexOf(q[1].replace('{issue}', '')) < 0;
     });
-    var jobs = own.concat(pickN(generic, 3 - own.length));
+    // 通用梗避開最近用過的，避免連續幾次都抽到同一則
+    var rec = this.engine.recent;
+    var fresh = generic.filter(function (j) { return !rec.has('j', j); });
+    var jobs = own.concat(pickN(fresh.length >= 3 - own.length ? fresh : generic, 3 - own.length));
+    jobs.forEach(function (j) { rec.push('j', j, 8); });
+    rec.save();
 
     var lines = [];
     lines.push('【職稱】' + title);
