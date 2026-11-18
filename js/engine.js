@@ -34,6 +34,9 @@
     { id: 'stack',     name: '官腔疊加型',     w: 1.6, seq: ['open:stack', 'core:stack', 'support:loop', 'close'] },
     { id: 'loop',      name: '無限循環型',     w: 1.4, seq: ['open', 'core', 'support:loop', 'close:loop'] },
     { id: 'inspect',   name: '過度精密行政型', w: 1.6, seq: ['open', 'core:inspect', 'support?', 'close'] },
+    { id: 'full',      name: '完整萬安體',     w: 1.8, seq: ['open:emergency', 'core:personal', 'core:visit', 'support:system', 'core:data?', 'close:grand'], bonus: 1 },
+    { id: 'debate',    name: '議會答詢型',     w: 1.4, seq: ['open', 'core:data', 'core:rebut2', 'support?', 'close:grand'] },
+    { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
     { id: 'angry',     name: '動怒模式',       w: 3,   seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
@@ -71,6 +74,10 @@
     { re: /萬全準備/g, max: 1, fixed: true },
     { re: /有沒有問題/g, max: 1 },
     { re: /不要等到/g, max: 1, fixed: true },
+    { re: /親自/g, max: 2, fixed: true },
+    { re: /關鍵/g, max: 3, fixed: true },
+    { re: /我很好奇|匪夷所思/g, max: 1, fixed: true },
+    { re: /身為市長/g, max: 1, fixed: true },
     { re: /我現在要求/g, max: 1, fixed: true },
     { re: /站出來|心裡有數|散會/g, max: 1, fixed: true }
   ];
@@ -178,7 +185,7 @@
     var tokens = norm.split(/[\s,，、;；/｜|＋+&]+/).filter(Boolean).slice(0, 4);
     var self = this;
     var hits = tokens.map(function (tok) {
-      var low = tok.toLowerCase(), t = null, i;
+      var low = tok.toLowerCase(), t = null, i, viaTitle = false;
       for (i = 0; i < self.kw.length; i++) if (self.kw[i].k === low) { t = self.kw[i].t; break; }
       if (!t) for (i = 0; i < self.kw.length; i++) {
         var k = self.kw[i].k;
@@ -190,12 +197,18 @@
         var kk = self.kw[i].k;
         if (kk.indexOf(low) >= 0 && Array.from(kk).length - len <= 2) { t = self.kw[i].t; break; }
       }
+      if (!t && self.titleResolver) {
+        var rk = self.titleResolver(low);
+        if (rk) for (i = 0; i < self.kw.length; i++) if (self.kw[i].k === rk) { t = self.kw[i].t; viaTitle = true; break; }
+      }
       var cat = t ? t.category : 'general';
       if (!t) for (i = 0; i < self.catTerms.length; i++) {
         if (kwMatch(low, self.catTerms[i].k)) { cat = self.catTerms[i].c; break; }
       }
-      return { token: tok, topic: t, category: cat };
+      return { token: tok, topic: t, category: cat, viaTitle: viaTitle };
     });
+    // 輸入的是職稱（如「鼠類偵防師」）時，改稱「鼠類偵防師業務」
+    hits.forEach(function (h, k) { if (h.viaTitle) tokens[k] += '業務'; });
     // 主題可設定 display_suffix，例如「法新社」→「法新社報導」、「輝達」→「輝達總部案」
     if (hits.length === 1 && hits[0].topic && hits[0].topic.display_suffix) {
       var sf = hits[0].topic.display_suffix;

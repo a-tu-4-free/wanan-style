@@ -20,6 +20,19 @@
     this.lastStem = {};
     var self = this;
     engine.titleMaker = function (q) { return self.quickTitle(q); };
+    // 職稱反查：輸入「鼠類偵防師」→ 對應議題「鼠患」
+    engine.titleResolver = function (q) {
+      // 以職稱結尾（師、專員、督導…）時，用議題關鍵字反查
+      if (/(師|專員|督導|組長|顧問|專家|執行長)$/.test(q)) {
+        var hit = self.findIssue(q);
+        if (hit) return hit.match[0].toLowerCase();
+      }
+      for (var i = 0; i < data.issues.length; i++) {
+        var it = data.issues[i];
+        for (var k = 0; k < it.stems.length; k++) if (q.indexOf(it.stems[k].toLowerCase()) >= 0) return it.match[0].toLowerCase();
+      }
+      return null;
+    };
   }
 
   TitleEngine.prototype.findIssue = function (text) {
