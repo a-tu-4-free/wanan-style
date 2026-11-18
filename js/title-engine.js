@@ -37,7 +37,8 @@
 
   TitleEngine.prototype.findIssue = function (text) {
     var low = text.toLowerCase();
-    for (var i = 0; i < this.match.length; i++) if (low.indexOf(this.match[i].k) >= 0) return this.match[i].it;
+    for (var i = 0; i < this.match.length; i++) if (low.indexOf(this.match[i].k) >= 0) { this.lastKey = this.match[i].k; return this.match[i].it; }
+    this.lastKey = '';
     return null;
   };
 
@@ -76,7 +77,12 @@
     var fill = function (s) { return s.replace(/\{issue\}/g, issueWord).replace(/\{title\}/g, title); };
 
     // 工作內容：議題專屬梗 2 則 + 通用梗 1 則
-    var own = issue && issue.jobs ? pickN(issue.jobs, 2) : [];
+    // 只命中部分字（如「垃圾車音樂」只對到「垃圾車」）時，專屬梗只用 1 則，避免答非所問得太離譜
+    var partial = issue && Array.from(issueWord).length - Array.from(this.lastKey || '').length >= 2;
+    var own = issue && issue.jobs ? pickN(issue.jobs, partial ? 1 : 2) : [];
+    // 輸入的是其他縣市的事件（垃圾山、前鎮漁港…）時，加一則「這是別的縣市的事」
+    var other = this.engine.findOther ? this.engine.findOther(issueWord) : null;
+    if (other && own.length < 2) own.push('被問到' + issueWord + '時，負責說明這是' + other.city + '的事，但我們都有掌握。');
     var ownText = own.join('');
     var generic = this.d.fallback_jobs.filter(function (j) {
       var q = j.match(/「(.+?)」/);

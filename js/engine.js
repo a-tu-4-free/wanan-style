@@ -38,6 +38,8 @@
     { id: 'debate',    name: '議會答詢型',     w: 1.4, seq: ['open', 'core:data', 'core:rebut2', 'support?', 'close:grand'] },
     { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
     { id: 'deflect',   name: '問A答B型',       w: 8, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
+    { id: 'other',     name: '這是別縣市的事型', w: 2, seq: ['open:other', 'core:other', 'core:deflect?', 'support:blame', 'close:other'], needOther: true },
+    { id: 'h_other',   name: '強硬模式・別縣市型', w: 2, seq: ['open:hother', 'core:hother', 'close:hrebut'], mode: 'angry', needOther: true },
     { id: 'cut',       name: '事件切割型',     w: 3,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
@@ -254,7 +256,7 @@
     var display = tokens.length > 1
       ? tokens.slice(0, -1).join('、') + '與' + tokens[tokens.length - 1]
       : (tokens[0] || '');
-    return { input: norm, display: display, hits: hits, negative: this.isNegative(norm) };
+    return { input: norm, display: display, hits: hits, negative: this.isNegative(norm), other: this.findOther(norm) };
   };
 
   // 負面議題（漏水、塞車、鼠患…）：不套用「讓○○更好」這類正面句型
@@ -314,6 +316,7 @@
     }
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
     ctx.cats = Object.keys(cats);
+    ctx.other = cls.other || null;
     ctx.deflect = this.pickDeflect(cls, ctx.cats);
     ctx.topicIds = cls.hits.filter(function (h) { return h.topic; }).map(function (h) { return h.topic.id; });
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
@@ -324,6 +327,16 @@
     ctx.personal = cls.hits.every(function (h) { return ['life', 'food', 'drink', 'entertainment'].indexOf(h.category) >= 0; });
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
+  };
+
+  // 使用者直接問其他縣市的事件（垃圾山、前鎮漁港…）
+  WananEngine.prototype.findOther = function (text) {
+    var t = String(text || '').toLowerCase();
+    for (var i = 0; i < this.deflect.length; i++) {
+      var al = this.deflect[i].aliases || [];
+      for (var k = 0; k < al.length; k++) if (t.indexOf(al[k].toLowerCase()) >= 0) return this.deflect[i];
+    }
+    return null;
   };
 
   // 問A答B：挑一筆其他縣市的素材。優先挑跟題目相關的，否則挑金額大的（越偏題越好笑）
@@ -338,7 +351,12 @@
         (it.cats || []).some(function (c) { return cats.indexOf(c) >= 0; });
     });
     var big = this.deflect.filter(function (it) { return it.big; });
-    var pool = related.length && Math.random() < 0.7 ? related : big;
+    // 問的就是其他縣市的事時，轉移到「另一個」縣市
+    if (cls.other) {
+      related = related.filter(function (it) { return it.city !== cls.other.city; });
+      big = big.filter(function (it) { return it.city !== cls.other.city; });
+    }
+    var pool = related.length && Math.random() < 0.7 ? related : (big.length ? big : this.deflect);
     return wpick(pool, function (it) { return self.recent.has('x', it.id) ? 0.2 : 1; });
   };
 
@@ -391,6 +409,7 @@
         case 'probs': return joinList(self.take(ctx, 'problems', 2)) || '相關問題';
         case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
         case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
+        case 'ocity': return ctx.other ? ctx.other.city : '';
         case 'dcity': return ctx.deflect ? ctx.deflect.city : '';
         case 'dname': return ctx.deflect ? ctx.deflect.name : '';
         case 'dfig': return ctx.deflect ? ctx.deflect.figure : '';
@@ -434,6 +453,7 @@
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
     if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
+    if (p.text.indexOf('{ocity}') >= 0 && !ctx.other) return false;
     // 問A答B 素材條件
     if (/\{d(city|name|fig|line)\}/.test(p.text)) {
       var dx = ctx.deflect;
@@ -478,12 +498,14 @@
     return null;
   };
 
-  WananEngine.prototype.pickStyle = function (avoid, mode, noAbsurd, boost) {
+  WananEngine.prototype.pickStyle = function (avoid, mode, noAbsurd, boost, other) {
     var self = this;
     mode = mode || 'speech';
     return wpick(STYLES, function (s) {
       if ((s.mode || 'speech') !== mode) return 0;
       if (s.absurd && noAbsurd) return 0;
+      if (s.needOther && !other) return 0;
+      if (other && s.needOther) return s.w * 14;
       if (boost && (s.id === 'deflect' || s.id === 'cut' || s.id === 'h_deflect')) return s.w * 7;
       if (s.id === avoid) return 0;
       return s.w * (self.recent.has('s', s.id) ? 0.35 : 1);
@@ -501,7 +523,7 @@
     });
     // 主題設定 deflect_boost（如遮陽傘）時，大幅提高問A答B出現機率
     var boost = cls.hits.some(function (h) { return h.topic && h.topic.deflect_boost; });
-    style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious, boost);
+    style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious, boost, !!cls.other);
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
