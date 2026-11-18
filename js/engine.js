@@ -432,7 +432,7 @@
     // 低機率彩蛋
     if (state.mode === 'speech' && ph.easter_eggs && Math.random() < 0.07) {
       var egg = rand(ph.easter_eggs);
-      if (state.text.indexOf(egg.slice(0, 4)) < 0) state.parts.push(egg);
+      if (state.text.indexOf(egg.slice(0, 4)) < 0 && this.withinLimits(state.text + egg, state)) state.parts.push(egg);
     }
 
     var text = style.headline && state.parts.length > 1
