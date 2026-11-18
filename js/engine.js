@@ -31,6 +31,10 @@
     { id: 'rebut',     name: '反擊質疑型',     w: 1.5, seq: ['open:rebut', 'core', 'support:rebut', 'close'] },
     { id: 'absurd',    name: '荒謬延伸型',     w: 1.4, seq: ['open', 'core', 'core:absurd', 'close'], absurd: true },
     { id: 'vision',    name: '願景收尾型',     w: 1.3, seq: ['open', 'core', 'support?', 'close:vision'] },
+    { id: 'stack',     name: '官腔疊加型',     w: 1.6, seq: ['open:stack', 'core:stack', 'support:loop', 'close'] },
+    { id: 'loop',      name: '無限循環型',     w: 1.4, seq: ['open', 'core', 'support:loop', 'close:loop'] },
+    { id: 'inspect',   name: '過度精密行政型', w: 1.6, seq: ['open', 'core:inspect', 'support?', 'close'] },
+    { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
     { id: 'angry',     name: '動怒模式',       w: 3,   seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
     { id: 'angry2',    name: '動怒模式・震怒', w: 1.5, seq: ['open', 'core', 'support', 'core', 'support', 'close'], mode: 'angry', bonus: 1 }
@@ -237,6 +241,7 @@
       add('outcomes', r.outcomes, 4);
       add('actions', r.actions, 3);
       ctx.verbs = ctx.verbs.concat(h.topic.verbs || []);
+      if (h.topic.metrics) ctx.metrics = (ctx.metrics || []).concat(h.topic.metrics);
     });
     Object.keys(cats).forEach(function (c) {
       var cd = self.cats[c] || self.general;
@@ -261,6 +266,7 @@
     ctx.topicIds = cls.hits.filter(function (h) { return h.topic; }).map(function (h) { return h.topic.id; });
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
     ctx.noPositive = ctx.negative || noPos || !hasTopic;
+    ctx.serious = noPos;
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
   };
@@ -281,11 +287,24 @@
 
   WananEngine.prototype.fill = function (tpl, ctx) {
     var self = this;
+    // 測量項目與儀器成對使用（鹹度→鹽度計），同一句共用一組
+    var metric = null;
+    var getMetric = function () {
+      if (!metric) {
+        var m = self.phrases.metrics || {};
+        metric = rand(ctx.metrics || m[(ctx.cats || [])[0]] || m.general || [['日常數值', '精密儀器']]);
+      }
+      return metric;
+    };
     return tpl.replace(/\{(\w+)\}/g, function (m, k) {
       switch (k) {
         case 'topic': return ctx.topic;
         case 'verb': return ctx.verb;
         case 'jobtitle': return ctx.jobtitle;
+        case 'tool': return tpl.indexOf('{metric}') >= 0 ? getMetric()[1] : rand(self.phrases.instruments || ['精密儀器']);
+        case 'metric': return getMetric()[0];
+        case 'friend': return rand(self.phrases.friends || ['多年好友']);
+        case 'slogan': return rand(self.phrases.slogans || ['幸福城市']);
         case 'd': return joinList(self.take(ctx, 'details', Math.random() < 0.6 ? 3 : 2));
         case 'd1': case 'd2': return self.take(ctx, 'details', 1)[0] || '相關細節';
         case 'obj': return self.take(ctx, 'objects', 1)[0] || '相關單位';
@@ -316,6 +335,7 @@
     if (p.text.indexOf('{xd}') >= 0 && !ctx.absurd) return false;
     if (p.positive && ctx.noPositive) return false;
     if (p.policy && ctx.negative) return false;
+    if (p.light && ctx.serious) return false;
     if (p.control && ctx.noPositive) return false;
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
@@ -344,7 +364,8 @@
         });
         var snapshot = Object.assign({}, ctx.used), fSnap = ctx.foreign.slice();
         var text = this.fill(p.text, ctx);
-        if (this.withinLimits(state.text + text, state)) return { p: p, text: text };
+        // limitFree：本身就是重複梗（如無限循環），只檢查前文，不把自己算進上限
+        if (this.withinLimits(p.limitFree ? state.text : state.text + text, state)) return { p: p, text: text };
         ctx.used = snapshot; ctx.foreign = fSnap;
         cands.splice(cands.indexOf(p), 1);
       }
@@ -376,9 +397,9 @@
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
-    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: mode };
+    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: style.patternMode || mode };
     var ph = this.phrases, self = this;
-    var nonCivic = { yes: mode === 'speech' && cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
+    var nonCivic = { yes: mode === 'speech' && !style.patternMode && cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
 
     style.seq.forEach(function (step) {
       var optional = step.slice(-1) === '?';
@@ -391,7 +412,7 @@
       var r = self.pickSentence(ctx, role, tag, state);
       if (!r) return;
       var s = r.text;
-      if (state.parts.length > 0 && !CONN_START.test(s)) {
+      if (state.parts.length > 0 && state.mode !== 'news' && !CONN_START.test(s)) {
         var pool = mode === 'angry' ? ph.angry_connectors : role === 'close' ? ph.close_prefix : ph.connectors;
         var prob = role === 'close' ? 0.25 : 0.35;
         if (pool && Math.random() < prob) {
@@ -409,12 +430,14 @@
     });
 
     // 低機率彩蛋
-    if (mode === 'speech' && ph.easter_eggs && Math.random() < 0.07) {
+    if (state.mode === 'speech' && ph.easter_eggs && Math.random() < 0.07) {
       var egg = rand(ph.easter_eggs);
       if (state.text.indexOf(egg.slice(0, 4)) < 0) state.parts.push(egg);
     }
 
-    var text = state.parts.join('');
+    var text = style.headline && state.parts.length > 1
+      ? state.parts[0] + '\n\n' + state.parts.slice(1).join('')
+      : state.parts.join('');
     Object.keys(state.ids).forEach(function (id) { self.recent.push('p', id, 45); });
     Object.keys(ctx.used).forEach(function (v) { self.recent.push('d', v, 90); });
     this.recent.push('s', style.id, 2);
