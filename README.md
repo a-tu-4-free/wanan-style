@@ -74,6 +74,8 @@ wanan-style/
 │   ├── topics_politics.json
 │   ├── topics_life.json     # 生活、娛樂
 │   └── topics_technology.json
+├── tools/
+│   └── audit.js             # 詞庫品質檢查（本機執行，不影響網站）
 ├── .nojekyll
 └── README.md
 ```
@@ -223,6 +225,15 @@ GitHub Pages 和瀏覽器都會快取檔案。每次更新請：
 - `stems`：職稱主幹，建議 6 字內。依職級變成「鴿糞預測師 → 鴿糞預測督導 → 首席鴿糞預測顧問 → 鴿糞預測總執行長」
 - `jobs`：惡搞工作內容，每次抽 2 則，再搭配 1 則通用梗（`fallback_jobs`）
 - 沒收錄的議題會用「輸入詞＋職能」自動產生職稱，工作內容全用通用梗
+
+### 品質檢查
+
+修改詞庫後，可以用 Node.js 跑自動檢查（所有主題 × 所有句型大量生成，列出未填變數、詞彙來源不符、重複片語等可疑結果）：
+
+```bash
+node tools/audit.js
+N=20 node tools/audit.js   # 每類多顯示幾個範例
+```
 
 ### 檢查 JSON 格式
 
