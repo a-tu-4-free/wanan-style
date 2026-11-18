@@ -258,10 +258,10 @@
     });
     Object.keys(cats).forEach(function (c) {
       var cd = self.cats[c] || self.general;
-      if (c !== 'general') keys.forEach(function (k) { add(k, cd.relations[k], hasTopic ? 0.5 : 2.5); });
+      if (c !== 'general') keys.forEach(function (k) { add(k, cd.relations[k], hasTopic ? 0.2 : 2.5); });
       if (!hasTopic && cls.hits.length === 1) ctx.verbs = ctx.verbs.concat(cd.verbs || []);
     });
-    keys.forEach(function (k) { add(k, self.general.relations[k], hasTopic ? 0.2 : 1); });
+    keys.forEach(function (k) { add(k, self.general.relations[k], hasTopic ? 0.08 : 1); });
 
     if (absurd) {
       var myCats = Object.keys(cats);
@@ -280,6 +280,7 @@
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
     ctx.noPositive = ctx.negative || noPos || !hasTopic;
     ctx.serious = noPos;
+    ctx.viaTitle = cls.hits.some(function (h) { return h.viaTitle; });
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
   };
@@ -335,12 +336,15 @@
     });
   };
 
+  // 只擋「新增後超過上限」的句子；前文因重複梗（limitFree）已超量時，不會連帶擋掉後面不含該詞的句子
   WananEngine.prototype.withinLimits = function (text, state) {
+    var prev = state.text || '';
     for (var i = 0; i < LIMITS.length; i++) {
-      if (countAll(text, LIMITS[i].re) > LIMITS[i].max + (LIMITS[i].fixed ? 0 : state.bonus)) return false;
+      var n = countAll(text, LIMITS[i].re);
+      if (n > LIMITS[i].max + (LIMITS[i].fixed ? 0 : state.bonus) && n > countAll(prev, LIMITS[i].re)) return false;
     }
     var tc = text.split(state.topic).length - 1;
-    return tc <= 2 + state.bonus;
+    return tc <= 2 + state.bonus || tc <= prev.split(state.topic).length - 1;
   };
 
   WananEngine.prototype.eligible = function (p, ctx) {
@@ -349,6 +353,7 @@
     if (p.positive && ctx.noPositive) return false;
     if (p.policy && ctx.negative) return false;
     if (p.light && ctx.serious) return false;
+    if (p.eventTopic && ctx.viaTitle) return false;
     if (p.control && ctx.noPositive) return false;
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
