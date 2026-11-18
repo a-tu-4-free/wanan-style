@@ -37,6 +37,8 @@
     { id: 'full',      name: '完整萬安體',     w: 1.8, seq: ['open:emergency', 'core:personal', 'core:visit', 'support:system', 'core:data?', 'close:grand'], bonus: 1 },
     { id: 'debate',    name: '議會答詢型',     w: 1.4, seq: ['open', 'core:data', 'core:rebut2', 'support?', 'close:grand'] },
     { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
+    { id: 'deflect',   name: '問A答B型',       w: 5, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
+    { id: 'cut',       name: '事件切割型',     w: 2,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
     // 強硬模式（內部代號 angry）：六種語氣 + 綜合型
@@ -46,6 +48,7 @@
     { id: 'h_dignity', name: '強硬模式・身分尊嚴型', w: 1.2, seq: ['open:dignity', 'core:dignity', 'support:dignity?', 'close:dignity'], mode: 'angry' },
     { id: 'h_accuse',  name: '強硬模式・連續質問型', w: 1.5, seq: ['open:accuse', 'core:accuse', 'support:accuse?', 'close:accuse'], mode: 'angry' },
     { id: 'h_declare', name: '強硬模式・強硬宣示型', w: 1.2, seq: ['open:declare', 'core:declare', 'support:declare?', 'close:declare'], mode: 'angry' },
+    { id: 'h_deflect', name: '強硬模式・怎麼不問型', w: 2,   seq: ['open:hdeflect', 'core:hdeflect', 'support:hrebut?', 'close:hrebut'], mode: 'angry' },
     { id: 'angry',     name: '強硬模式・綜合型',     w: 1.5, seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
     { id: 'angry2',    name: '強硬模式・震怒',       w: 1,   seq: ['open', 'core', 'support', 'core', 'support', 'close'], mode: 'angry', bonus: 1 }
   ];
@@ -94,6 +97,11 @@
     { re: /都有掌握/g, max: 1, fixed: true },
     { re: /跨局處協調/g, max: 1, fixed: true },
     { re: /符合市民期待/g, max: 1, fixed: true },
+    { re: /高雄|台南|屏東/g, max: 3, fixed: true },
+    { re: /清楚說明/g, max: 1, fixed: true },
+    { re: /怎麼不問|怎麼花的/g, max: 1, fixed: true },
+    { re: /局部問題|單一個案/g, max: 1, fixed: true },
+    { re: /整體城市治理/g, max: 1, fixed: true },
     { re: /凍未條/g, max: 2, fixed: true },
     { re: /受夠了/g, max: 3, fixed: true },
     { re: /說了算/g, max: 3, fixed: true },
@@ -186,6 +194,7 @@
     this.cats = data.categories.categories;
     this.general = this.cats.general;
     this.topics = data.topics;
+    this.deflect = (data.deflect && data.deflect.items) || [];
     this.recent = new Recent();
 
     var kw = [];
@@ -305,6 +314,7 @@
     }
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
     ctx.cats = Object.keys(cats);
+    ctx.deflect = this.pickDeflect(cls, ctx.cats);
     ctx.topicIds = cls.hits.filter(function (h) { return h.topic; }).map(function (h) { return h.topic.id; });
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
     ctx.noPositive = ctx.negative || noPos || !hasTopic;
@@ -314,6 +324,22 @@
     ctx.personal = cls.hits.every(function (h) { return ['life', 'food', 'drink', 'entertainment'].indexOf(h.category) >= 0; });
     ctx.jobtitle = this.titleMaker ? this.titleMaker(cls.input) : '';
     return ctx;
+  };
+
+  // 問A答B：挑一筆其他縣市的素材。優先挑跟題目相關的，否則挑金額大的（越偏題越好笑）
+  WananEngine.prototype.pickDeflect = function (cls, cats) {
+    if (!this.deflect.length) return null;
+    var self = this;
+    var words = [cls.input.toLowerCase()];
+    cls.hits.forEach(function (h) { if (h.topic) words = words.concat([h.topic.name], h.topic.keywords || []); });
+    var text = words.join('|').toLowerCase();
+    var related = this.deflect.filter(function (it) {
+      return it.match.some(function (k) { return text.indexOf(k) >= 0; }) ||
+        (it.cats || []).some(function (c) { return cats.indexOf(c) >= 0; });
+    });
+    var big = this.deflect.filter(function (it) { return it.big; });
+    var pool = related.length && Math.random() < 0.7 ? related : big;
+    return wpick(pool, function (it) { return self.recent.has('x', it.id) ? 0.2 : 1; });
   };
 
   WananEngine.prototype.take = function (ctx, key, n) {
@@ -365,6 +391,10 @@
         case 'probs': return joinList(self.take(ctx, 'problems', 2)) || '相關問題';
         case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
         case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
+        case 'dcity': return ctx.deflect ? ctx.deflect.city : '';
+        case 'dname': return ctx.deflect ? ctx.deflect.name : '';
+        case 'dfig': return ctx.deflect ? ctx.deflect.figure : '';
+        case 'dline': return ctx.deflect ? ctx.deflect.line : '';
         case 'xtopic': return ctx.foreignName || '其他議題';
         case 'xd':
           var xs = ctx.foreign.splice(0, Math.random() < 0.5 ? 2 : 1);
@@ -381,6 +411,11 @@
     for (var i = 0; i < LIMITS.length; i++) {
       var n = countAll(text, LIMITS[i].re);
       if (n > LIMITS[i].max + (LIMITS[i].fixed ? 0 : state.bonus) && n > countAll(prev, LIMITS[i].re)) return false;
+    }
+    // 問A答B 的素材名稱，同一段只點名一次
+    if (state.dname) {
+      var dn = text.split(state.dname).length - 1;
+      if (dn > 1 && dn > prev.split(state.dname).length - 1) return false;
     }
     var tc = text.split(state.topic).length - 1;
     return tc <= 2 + state.bonus || tc <= prev.split(state.topic).length - 1;
@@ -399,6 +434,14 @@
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
     if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
+    // 問A答B 素材條件
+    if (/\{d(city|name|fig|line)\}/.test(p.text)) {
+      var dx = ctx.deflect;
+      if (!dx) return false;
+      if (p.text.indexOf('{dfig}') >= 0 && !dx.figure) return false;
+      if (p.needMoney && !dx.money) return false;
+      if (p.needDneg && dx.kind !== 'negative') return false;
+    }
     if (p.negOnly && !ctx.negative) return false;
     return true;
   };
@@ -457,7 +500,7 @@
     var mode = style.mode || 'speech';
 
     var ctx = this.buildContext(cls, style.absurd);
-    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: style.patternMode || mode, groups: {} };
+    var state = { text: '', ids: {}, tags: {}, parts: [], conns: {}, bonus: style.bonus || 0, topic: ctx.topic, mode: style.patternMode || mode, groups: {}, dname: ctx.deflect ? ctx.deflect.name : '' };
     var ph = this.phrases, self = this;
     var nonCivic = { yes: mode === 'speech' && !style.patternMode && cls.hits.every(function (h) { return CIVIC_CATS.indexOf(h.category) < 0; }), done: false };
 
@@ -501,6 +544,7 @@
       : state.parts.join('');
     Object.keys(state.ids).forEach(function (id) { self.recent.push('p', id, 45); });
     Object.keys(ctx.used).forEach(function (v) { self.recent.push('d', v, 90); });
+    if (ctx.deflect && /高雄|台南|屏東/.test(text)) this.recent.push('x', ctx.deflect.id, 6);
     this.recent.push('s', style.id, 2);
     this.recent.save();
 

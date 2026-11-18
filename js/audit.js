@@ -5,7 +5,7 @@ const W=require(D+'/js/engine.js'),T=require(D+'/js/title-engine.js');
 const j=f=>JSON.parse(fs.readFileSync(path.join(D,'data',f),'utf8'));
 const topics=['food','city','transport','politics','life','technology'].flatMap(f=>j(`topics_${f}.json`).topics);
 const cats=j('categories.json').categories;
-const e=new W({patterns:j('patterns.json'),phrases:j('phrases.json'),categories:j('categories.json'),topics});
+const e=new W({patterns:j('patterns.json'),phrases:j('phrases.json'),categories:j('categories.json'),topics,deflect:j('deflect.json')});
 const t=new T(e,j('titles.json'));
 // 所有單位名稱 → 來源
 const orgOwners={};

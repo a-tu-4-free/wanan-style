@@ -5,13 +5,14 @@
   'use strict';
 
   // 更新詞庫或程式後請同步修改此版本號（index.html 的 ?v= 也要一起改），避免使用者讀到舊快取
-  var VERSION = '20261118-9';
+  var VERSION = '20261118-10';
 
   var DATA = {
     patterns: 'data/patterns.json',
     phrases: 'data/phrases.json',
     categories: 'data/categories.json',
     titles: 'data/titles.json',
+    deflect: 'data/deflect.json',
     topics: [
       'data/topics_food.json',
       'data/topics_city.json',
@@ -46,11 +47,11 @@
     if (window.__WANAN_DATA__) return Promise.resolve(window.__WANAN_DATA__); // 單檔預覽版用
     return Promise.all([
       loadJSON(DATA.patterns), loadJSON(DATA.phrases), loadJSON(DATA.categories),
-      loadJSON(DATA.titles), Promise.all(DATA.topics.map(loadJSON))
+      loadJSON(DATA.titles), loadJSON(DATA.deflect), Promise.all(DATA.topics.map(loadJSON))
     ]).then(function (r) {
       return {
-        patterns: r[0], phrases: r[1], categories: r[2], titles: r[3],
-        topics: r[4].reduce(function (all, f) { return all.concat(f.topics || []); }, [])
+        patterns: r[0], phrases: r[1], categories: r[2], titles: r[3], deflect: r[4],
+        topics: r[5].reduce(function (all, f) { return all.concat(f.topics || []); }, [])
       };
     });
   }
