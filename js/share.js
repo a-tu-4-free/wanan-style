@@ -107,7 +107,7 @@
     if (tag) {
       ctx.font = '600 24px ' + FONT;
       var tw = ctx.measureText(tag).width + 32;
-      var angry = tag.indexOf('動怒') === 0;
+      var angry = tag.indexOf('強硬') === 0;
       ctx.fillStyle = angry ? C.red : C.redSoft; rr(ctx, bx + aPad, ty, tw, 42, 21); ctx.fill();
       ctx.fillStyle = angry ? '#fff' : C.red; ctx.fillText(tag, bx + aPad + 16, ty + 30);
       ty += tagH;

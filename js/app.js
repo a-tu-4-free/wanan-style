@@ -5,7 +5,7 @@
   'use strict';
 
   // 更新詞庫或程式後請同步修改此版本號（index.html 的 ?v= 也要一起改），避免使用者讀到舊快取
-  var VERSION = '20261118-7';
+  var VERSION = '20261118-8';
 
   var DATA = {
     patterns: 'data/patterns.json',
@@ -28,7 +28,7 @@
   var engine = null, titleEngine = null, busy = false, mode = 'speech';
   var PLACEHOLDER = {
     speech: '輸入詞彙，例如：披薩、路燈、外星人',
-    angry: '輸入讓人動怒的事，例如：漏水、塞車、鼠患',
+    angry: '輸入要強硬處理的事，例如：漏水、塞車',
     title: '輸入市政問題，例如：鼠患、停車、失戀'
   };
   var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

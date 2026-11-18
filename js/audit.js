@@ -13,7 +13,7 @@ const addOrg=(o,owner)=>{(orgOwners[o]=orgOwners[o]||new Set()).add(owner)};
 topics.forEach(tp=>(tp.relations.organizations||[]).forEach(o=>addOrg(o,'t:'+tp.id)));
 Object.keys(cats).forEach(c=>(cats[c].relations.organizations||[]).forEach(o=>addOrg(o,'c:'+c)));
 const allOrgs=Object.keys(orgOwners).sort((a,b)=>b.length-a.length);
-const styles=W.STYLES.map(s=>s.id);
+const styles=W.STYLES.filter(s=>(s.mode||'speech')==='speech').map(s=>s.id);
 const issues={};let total=0;
 const flag=(k,ctx)=>{(issues[k]=issues[k]||[]).push(ctx)};
 const extraInputs=['做家事','冰箱','我的貓','水管','台北','鍋貼','蟑螂','颱風','某某某','測試','Pizza','鼠類偵防師','猴子訓練師'];
@@ -47,7 +47,7 @@ for(const w of inputs){
     if(tx.replace(/[。！？\n]/g,'').length<45) flag('太短',ctxs);
     if(/的的|，，|。。|、、|與與|及及/.test(tx)) flag('標點/字重複',ctxs);
   }
-  const a=e.generate(w,{mode:'angry'});total++; if(/\{|undefined/.test(a.text))flag('未填變數',a.text);
+  for(const st of W.STYLES.filter(x=>x.mode==='angry')){ const a=e.generate(w,{styleId:st.id});total++; if(/\{|undefined/.test(a.text))flag('未填變數',a.text); const m=a.text.replace(/受夠了|凍未條|說了算|一次、兩次、三次|一個月了|決策者|強硬|現在就提出來/g,'').match(/(.{6,}).*\1/s); if(m) flag('強硬模式重複片語',`[${w}|${a.style}] ${a.text}  ⟶「${m[1]}」`); if(a.text.replace(/[。！？]/g,'').length<30) flag('強硬模式太短',`[${w}|${a.style}] ${a.text}`); }
   const ti=t.generate(w);total++; if(/\{|undefined/.test(ti.text))flag('未填變數',ti.text);
   if(Array.from(ti.title).length>12) flag('職稱過長',`[${w}] ${ti.title}`);
 }

@@ -29,7 +29,7 @@
     { id: 'crossdept', name: '跨局處協調型',   w: 2,   seq: ['open', 'core:crossdept', 'core?', 'support', 'close'] },
     { id: 'long',      name: '長篇完整說明型', w: 1.4, seq: ['open', 'core', 'support', 'core', 'support', 'close'], bonus: 1 },
     { id: 'rebut',     name: '反擊質疑型',     w: 1.5, seq: ['open:rebut', 'core', 'support:rebut', 'close'] },
-    { id: 'absurd',    name: '荒謬延伸型',     w: 1.4, seq: ['open', 'core', 'core:absurd', 'close'], absurd: true },
+    { id: 'absurd',    name: '荒謬延伸型',     w: 0.8, seq: ['open', 'core', 'core:absurd', 'close'], absurd: true },
     { id: 'vision',    name: '願景收尾型',     w: 1.3, seq: ['open', 'core', 'support?', 'close:vision'] },
     { id: 'stack',     name: '官腔疊加型',     w: 1.6, seq: ['open:stack', 'core:stack', 'support:loop', 'close'] },
     { id: 'loop',      name: '無限循環型',     w: 1.4, seq: ['open', 'core', 'support:loop', 'close:loop'] },
@@ -39,8 +39,15 @@
     { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
-    { id: 'angry',     name: '動怒模式',       w: 3,   seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
-    { id: 'angry2',    name: '動怒模式・震怒', w: 1.5, seq: ['open', 'core', 'support', 'core', 'support', 'close'], mode: 'angry', bonus: 1 }
+    // 強硬模式（內部代號 angry）：六種語氣 + 綜合型
+    { id: 'h_command', name: '強硬模式・命令型',     w: 2,   seq: ['open:command', 'core:command', 'support:command?', 'close:command'], mode: 'angry' },
+    { id: 'h_fed',     name: '強硬模式・凍未條型',   w: 2,   seq: ['open:fed', 'core:fed', 'support:fed?', 'close:fed'], mode: 'angry' },
+    { id: 'h_rebut',   name: '強硬模式・反擊型',     w: 1.6, seq: ['open:hrebut', 'core:hrebut', 'support:hrebut?', 'close:hrebut'], mode: 'angry' },
+    { id: 'h_dignity', name: '強硬模式・身分尊嚴型', w: 1.2, seq: ['open:dignity', 'core:dignity', 'support:dignity?', 'close:dignity'], mode: 'angry' },
+    { id: 'h_accuse',  name: '強硬模式・連續質問型', w: 1.5, seq: ['open:accuse', 'core:accuse', 'support:accuse?', 'close:accuse'], mode: 'angry' },
+    { id: 'h_declare', name: '強硬模式・強硬宣示型', w: 1.2, seq: ['open:declare', 'core:declare', 'support:declare?', 'close:declare'], mode: 'angry' },
+    { id: 'angry',     name: '強硬模式・綜合型',     w: 1.5, seq: ['open', 'core', 'support', 'close'], mode: 'angry' },
+    { id: 'angry2',    name: '強硬模式・震怒',       w: 1,   seq: ['open', 'core', 'support', 'core', 'support', 'close'], mode: 'angry', bonus: 1 }
   ];
 
   // 同一段文字中的詞彙上限（D10 互斥規則）
@@ -49,7 +56,6 @@
     { re: /持續/g, max: 2 },
     { re: /第一時間/g, max: 1, fixed: true },
     { re: /如果/g, max: 1, fixed: true },
-    { re: /尊重/g, max: 1, fixed: true },
     { re: /掌握/g, max: 2 },
     { re: /跨局處/g, max: 2 },
     { re: /開放/g, max: 1, fixed: true },
@@ -88,6 +94,15 @@
     { re: /都有掌握/g, max: 1, fixed: true },
     { re: /跨局處協調/g, max: 1, fixed: true },
     { re: /符合市民期待/g, max: 1, fixed: true },
+    { re: /凍未條/g, max: 2, fixed: true },
+    { re: /受夠了/g, max: 3, fixed: true },
+    { re: /說了算/g, max: 3, fixed: true },
+    { re: /依法認定/g, max: 1, fixed: true },
+    { re: /要不要負責|不用負責/g, max: 1, fixed: true },
+    { re: /決策者/g, max: 2, fixed: true },
+    { re: /不要給我/g, max: 2, fixed: true },
+    { re: /強硬/g, max: 3, fixed: true },
+    { re: /尊重/g, max: 1, fixed: true },
     { re: /不要再跟我說|不要跟我說/g, max: 1, fixed: true },
     { re: /現在有沒有問題/g, max: 1, fixed: true },
     { re: /身為市長/g, max: 1, fixed: true },
@@ -284,8 +299,8 @@
       });
       if (others.length) {
         var ft = rand(others);
+        ctx.foreignName = ft.name;
         ctx.foreign = ft.relations.details.slice().sort(function () { return Math.random() - 0.5; });
-        add('details', ctx.foreign.splice(0, 1), 3);
       }
     }
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
@@ -350,6 +365,7 @@
         case 'probs': return joinList(self.take(ctx, 'problems', 2)) || '相關問題';
         case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
         case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
+        case 'xtopic': return ctx.foreignName || '其他議題';
         case 'xd':
           var xs = ctx.foreign.splice(0, Math.random() < 0.5 ? 2 : 1);
           xs.forEach(function (x) { ctx.used[x] = 1; });
@@ -372,7 +388,7 @@
 
   WananEngine.prototype.eligible = function (p, ctx) {
     if (p.text.indexOf('{verb}') >= 0 && !ctx.verb) return false;
-    if (p.text.indexOf('{xd}') >= 0 && !ctx.absurd) return false;
+    if ((p.text.indexOf('{xd}') >= 0 || p.text.indexOf('{xtopic}') >= 0) && !ctx.absurd) return false;
     if (p.positive && ctx.noPositive) return false;
     if (p.policy && ctx.negative) return false;
     if (p.light && ctx.serious) return false;
