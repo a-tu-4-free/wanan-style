@@ -263,6 +263,12 @@
     {"id": "n_e02", "role": "close", "tags": [], "text": "市府呼籲市民耐心等候，相關進度將適時對外說明。", "limitFree": true, "mode": "news"},
     {"id": "n_e03", "role": "close", "tags": [], "text": "對此，市長受訪時僅表示：「我們都有掌握。」", "limitFree": true, "mode": "news"},
     {"id": "n_e04", "role": "close", "tags": [], "text": "市長受訪時表示：「只有更好，沒有最好。」", "limitFree": true, "mode": "news", "positive": true},
-    {"id": "n_e05", "role": "close", "tags": [], "text": "市長最後強調：「我一直表達開放態度。」", "limitFree": true, "mode": "news", "positive": true}
+    {"id": "n_e05", "role": "close", "tags": [], "text": "市長最後強調：「我一直表達開放態度。」", "limitFree": true, "mode": "news", "positive": true},
+    {"id": "s40", "role": "support", "tags": ["phone"], "text": "不好意思，我先看一下手機。……（低頭看手機 50 秒）……好，剛剛是新訊息，我們都有掌握。", "weight": 1.5, "limitFree": true},
+    {"id": "e34", "role": "close", "tags": ["phone"], "text": "我剛剛看手機不是不專心，是在看新訊息，新訊息我們也都有掌握。", "weight": 1.5, "limitFree": true},
+    {"id": "a_s11", "role": "support", "tags": ["phone"], "text": "等一下，我先看一下手機。……（50 秒後）……好，現在有沒有問題？", "weight": 1.5, "mode": "angry", "limitFree": true},
+    {"id": "n_s05", "role": "support", "tags": ["phone"], "text": "記者會進行中，市長一度低頭看手機約 50 秒，全場靜候，市府事後說明是在看新訊息。", "weight": 1.5, "mode": "news", "limitFree": true},
+    {"id": "n_e06", "role": "close", "tags": ["phone"], "text": "對此，市長看完手機後表示：「剛剛是新訊息，我們都有掌握。」", "weight": 1.5, "mode": "news", "limitFree": true},
+    {"id": "s41", "role": "support", "tags": ["rehearse"], "text": "這段說明我們事前都有排練過，包括停頓的位置。", "weight": 0.7, "limitFree": true}
   ]
 }
