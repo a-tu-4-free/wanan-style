@@ -40,6 +40,10 @@
     { id: 'deflect',   name: '問A答B型',       w: 8, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
     { id: 'other',     name: '這是別縣市的事型', w: 2, seq: ['open:other', 'core:other', 'core:deflect?', 'support:blame', 'close:other'], needOther: true },
     { id: 'h_other',   name: '強硬模式・別縣市型', w: 2, seq: ['open:hother', 'core:hother', 'close:hrebut'], mode: 'angry', needOther: true },
+    { id: 'escape',    name: '逃跑型',         w: 3,   seq: ['open:escape', 'core:escape', 'support:escape?', 'close:escape'] },
+    { id: 'law',       name: '亂套法律型',     w: 2.5, seq: ['open', 'core:law', 'support:law?', 'close'] },
+    { id: 'result',    name: '成果包裝型',     w: 2,   seq: ['open', 'core:result', 'support:result', 'close:result'] },
+    { id: 'combo',     name: '逃跑×亂套型',    w: 2.5, seq: ['open:combo', 'core:law', 'core:result?', 'support:escape', 'close:escape'] },
     { id: 'cut',       name: '事件切割型',     w: 3,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
@@ -104,6 +108,8 @@
     { re: /怎麼不問|怎麼花的/g, max: 1, fixed: true },
     { re: /局部問題|單一個案/g, max: 1, fixed: true },
     { re: /整體城市治理/g, max: 1, fixed: true },
+    { re: /謝謝喔/g, max: 1, fixed: true },
+    { re: /《/g, max: 1, fixed: true },
     { re: /凍未條/g, max: 2, fixed: true },
     { re: /受夠了/g, max: 3, fixed: true },
     { re: /說了算/g, max: 3, fixed: true },
@@ -120,12 +126,12 @@
     { re: /站出來|心裡有數|散會/g, max: 1, fixed: true }
   ];
 
-  var CONN_START = /^(所以|其實|當然|也就是說|換句話說|更重要的是|最重要的是|包括|首先|另外|同時|事實上|因此|另一方面|在這個部分|至於|如果|我要強調|我必須說|必須要說|就相關問題|這當中|總而言之|最後|我想|我必須|我要|我認為|我相信|該)/;
+  var CONN_START = /^(所以|其實|當然|也就是說|換句話說|更重要的是|最重要的是|包括|首先|另外|同時|事實上|因此|另一方面|在這個部分|至於|如果|我要強調|我必須說|必須要說|就相關問題|這當中|總而言之|最後|我想|我必須|我要|我認為|我相信|該|好，)/;
 
   var STORE_KEY = 'wanan_recent_v1';
 
   // 只在指定時使用的標籤：absurd 荒謬混搭、civic 非市政題目的「市政化」開場
-  var EXCLUSIVE = ['absurd', 'civic'];
+  var EXCLUSIVE = ['absurd', 'civic', 'escape'];
   var CIVIC_CATS = ['city', 'transport', 'politics'];
 
   /* ---------- 工具 ---------- */
@@ -317,6 +323,13 @@
     ctx.verb = ctx.verbs.length ? rand(ctx.verbs) : '';
     ctx.cats = Object.keys(cats);
     ctx.other = cls.other || null;
+    // 亂套法律：主題指定的法律優先，否則隨機
+    var lawList = this.phrases.laws || [];
+    var named = [];
+    cls.hits.forEach(function (h) { if (h.topic && h.topic.laws) named = named.concat(h.topic.laws); });
+    var namedLaws = lawList.filter(function (l) { return named.indexOf(l.name) >= 0; });
+    ctx.law = lawList.length ? wpick(namedLaws.length && Math.random() < 0.7 ? namedLaws : lawList,
+      function (l) { return self.recent.has('l', l.name) ? 0.2 : 1; }) : null;
     ctx.deflect = this.pickDeflect(cls, ctx.cats);
     ctx.topicIds = cls.hits.filter(function (h) { return h.topic; }).map(function (h) { return h.topic.id; });
     // 不知道是什麼的詞（未收錄）、負面議題、真實機構：不使用「讓○○更好、成為驕傲」這類正面句
@@ -410,6 +423,8 @@
         case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
         case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
         case 'ocity': return ctx.other ? ctx.other.city : '';
+        case 'law': return ctx.law ? ctx.law.name : '相關法律';
+        case 'lawline': return ctx.law ? ctx.law.line.replace(/\{topic\}/g, ctx.topic) : '確保市民權益';
         case 'dcity': return ctx.deflect ? ctx.deflect.city : '';
         case 'dname': return ctx.deflect ? ctx.deflect.name : '';
         case 'dfig': return ctx.deflect ? ctx.deflect.figure : '';
@@ -572,6 +587,7 @@
     Object.keys(state.ids).forEach(function (id) { self.recent.push('p', id, 45); });
     Object.keys(ctx.used).forEach(function (v) { self.recent.push('d', v, 90); });
     if (ctx.deflect && /高雄|台南|屏東/.test(text)) this.recent.push('x', ctx.deflect.id, 6);
+    if (ctx.law && text.indexOf(ctx.law.name) >= 0) this.recent.push('l', ctx.law.name, 8);
     this.recent.push('s', style.id, 2);
     this.recent.save();
 

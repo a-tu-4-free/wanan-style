@@ -40,11 +40,11 @@ for(const w of inputs){
       for(const o of allOrgs){ if(rest.includes(o)){ const own=[...orgOwners[o]]; if(!own.some(x=>allowed.has(x))) flag('單位不相關:'+o,ctxs); rest=rest.split(o).join('#'); } }
     }
     // 重複片語（6 字以上出現兩次），排除故意重複的句子
-    const plain=tx.replace(/後續追蹤|持續努力|階段性|一一|會議紀錄|研議|最快的速度|完成|列管|滿意|測量|專案/g,'');
+    const plain=(s==='escape'?'':tx).replace(/後續追蹤|持續努力|階段性|一一|會議紀錄|研議|最快的速度|完成|列管|滿意|測量|專案/g,'');
     const m=plain.match(/(.{6,}).*\1/s); if(m) flag('重複片語',ctxs+'  ⟶「'+m[1]+'」');
     // 同一連接詞重複
     for(const c of ['也就是說','更重要的是','當然','其實','所以','另外']) if(tx.split(c).length>3) flag('連接詞過多:'+c,ctxs);
-    if(tx.replace(/[。！？\n]/g,'').length<45) flag('太短',ctxs);
+    if(s!=='escape' && tx.replace(/[。！？\n]/g,'').length<45) flag('太短',ctxs);
     if(/的的|，，|。。|、、|與與|及及/.test(tx)) flag('標點/字重複',ctxs);
   }
   for(const st of W.STYLES.filter(x=>x.mode==='angry')){ const a=e.generate(w,{styleId:st.id});total++; if(/\{|undefined/.test(a.text))flag('未填變數',a.text); const m=a.text.replace(/受夠了|凍未條|說了算|一次、兩次、三次|一個月了|決策者|強硬|現在就提出來/g,'').match(/(.{6,}).*\1/s); if(m) flag('強硬模式重複片語',`[${w}|${a.style}] ${a.text}  ⟶「${m[1]}」`); if(a.text.replace(/[。！？]/g,'').length<30) flag('強硬模式太短',`[${w}|${a.style}] ${a.text}`); }
