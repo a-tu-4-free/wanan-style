@@ -398,7 +398,10 @@
     var getMetric = function () {
       if (!metric) {
         var m = self.phrases.metrics || {};
-        metric = rand(ctx.metrics || m[(ctx.cats || [])[0]] || m.general || [['日常數值', '精密儀器']]);
+        // 市政、政治類題目沒有專屬測量項目時，改用通用（滿意度、幸福濃度），避免「用溫度計測量違建涼爽程度」
+        var c0 = (ctx.cats || [])[0];
+        var catM = (c0 === 'city' || c0 === 'politics') ? null : m[c0];
+        metric = rand(ctx.metrics || catM || m.general || [['日常數值', '精密儀器']]);
       }
       return metric;
     };
