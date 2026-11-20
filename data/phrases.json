@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "notes": "connectors 用於中段句子前綴；close_prefix 用於結尾前綴；easter_eggs 為低機率彩蛋；political_phrases 供未來濃度測試使用。；angry_connectors 為動怒模式連接詞；negative_words 用於判斷負面議題；instruments／friends／slogans 供 {tool} {friend} {slogan} 變數使用；metrics：各分類可測量的項目與對應儀器，供 {metric} {tool} 使用；slogans 依分類挑選，主題可用 slogans 欄位指定（如營養午餐→安全校園）",
+  "notes": "connectors 用於中段句子前綴；close_prefix 用於結尾前綴；easter_eggs 為低機率彩蛋；political_phrases 供未來濃度測試使用。；angry_connectors 為動怒模式連接詞；negative_words 用於判斷負面議題；instruments／friends／slogans 供 {tool} {friend} {slogan} 變數使用；metrics：各分類可測量的項目與對應儀器，供 {metric} {tool} 使用；slogans 依分類挑選，主題可用 slogans 欄位指定（如營養午餐→安全校園）；laws：亂套法律用（政治諷刺，刻意錯置，不構成法律意見）",
   "connectors": [
     "同時，",
     "另外，",
@@ -560,5 +560,79 @@
         "精密儀器"
       ]
     ]
-  }
+  },
+  "laws": [
+    {
+      "name": "消費者保護法",
+      "line": "市民都是納稅消費者，我們會從消費者權益保障著手"
+    },
+    {
+      "name": "著作權法",
+      "line": "{topic}涉及創作與設計，我們會保障相關的設計理念"
+    },
+    {
+      "name": "動物保護法",
+      "line": "我們會兼顧市民生活，以及相關生物的生存權益"
+    },
+    {
+      "name": "個人資料保護法",
+      "line": "我們會保護每一筆{topic}相關資料的安全"
+    },
+    {
+      "name": "食品安全衛生管理法",
+      "line": "我們會確保{topic}的環境衛生，讓市民安心使用"
+    },
+    {
+      "name": "勞動基準法",
+      "line": "我們會保障{topic}期間所有市民的工作權益"
+    },
+    {
+      "name": "建築法",
+      "line": "我們會保障{topic}在造型上的美學與結構安全"
+    },
+    {
+      "name": "水污染防治法",
+      "line": "我們會要求相關的雨水，依法提出改善計畫"
+    },
+    {
+      "name": "植物品種及種苗法",
+      "line": "我們會保障{topic}相關植栽的品種權益"
+    },
+    {
+      "name": "道路交通管理處罰條例",
+      "line": "{topic}相關的違規行為，我們會依法舉發"
+    },
+    {
+      "name": "文化資產保存法",
+      "line": "{topic}是否具有文化資產價值，我們會依法審議"
+    },
+    {
+      "name": "商標法",
+      "line": "{topic}相關的造型與名稱，我們會研議申請商標保護"
+    },
+    {
+      "name": "公平交易法",
+      "line": "我們會確保{topic}相關的市場競爭公平合理"
+    },
+    {
+      "name": "噪音管制法",
+      "line": "我們會確保討論{topic}時，音量符合相關標準"
+    },
+    {
+      "name": "民法",
+      "line": "{topic}涉及民法上的權利義務關係，我們尊重當事人的意思自治"
+    },
+    {
+      "name": "氣象法",
+      "line": "{topic}相關的天氣狀況，我們會以中央氣象署的預報為準"
+    },
+    {
+      "name": "野生動物保育法",
+      "line": "{topic}周邊是否有保育類動物，我們會先進行調查"
+    },
+    {
+      "name": "廣告物管理辦法",
+      "line": "{topic}相關的宣傳，我們會確保符合廣告物規範"
+    }
+  ]
 }
