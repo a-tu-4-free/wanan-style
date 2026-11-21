@@ -491,6 +491,7 @@
       return p.role === role && (p.mode || 'speech') === state.mode && !state.ids[p.id] && self.eligible(p, ctx) &&
         !(p.group && state.groups[p.group]) &&
         !(p.needMention && !(ctx.deflect && state.text.indexOf(ctx.deflect.city) >= 0)) &&
+        !(p.needPrior && state.text.indexOf(p.needPrior) < 0) &&
         EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
     });
     var lists = [];
