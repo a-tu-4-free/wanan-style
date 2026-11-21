@@ -471,7 +471,7 @@
     if (p.topics && !ctx.topicIds.some(function (id) { return p.topics.indexOf(id) >= 0; })) return false;
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
     if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
-    if (p.text.indexOf('{ocity}') >= 0 && !ctx.other) return false;
+    if ((p.needOther || p.text.indexOf('{ocity}') >= 0) && !ctx.other) return false;
     // 問A答B 素材條件
     if (/\{d(city|name|fig|line)\}/.test(p.text)) {
       var dx = ctx.deflect;
@@ -580,7 +580,8 @@
     });
 
     // 低機率彩蛋
-    if (state.mode === 'speech' && ph.easter_eggs && Math.random() < 0.07) {
+    // 彩蛋：已經說「謝謝」離場的回答不再補一句
+    if (state.mode === 'speech' && ph.easter_eggs && !/謝謝/.test(state.text) && Math.random() < 0.07) {
       var egg = rand(ph.easter_eggs);
       if (state.text.indexOf(egg.slice(0, 4)) < 0 && this.withinLimits(state.text + egg, state)) state.parts.push(egg);
     }
