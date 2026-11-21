@@ -198,6 +198,7 @@
   /* ---------- 引擎 ---------- */
   function WananEngine(data) {
     this.patterns = data.patterns.patterns;
+    this.byId = {}; var bid = this.byId; this.patterns.forEach(function (p) { bid[p.id] = p; });
     this.phrases = data.phrases;
     this.cats = data.categories.categories;
     this.general = this.cats.general;
@@ -503,11 +504,14 @@
         !(p.group && state.groups[p.group]) &&
         !(p.needMention && !(ctx.deflect && state.text.indexOf(ctx.deflect.city) >= 0)) &&
         !(p.needPrior && state.text.indexOf(p.needPrior) < 0) &&
-        EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; });
+        (tag === '__sig' || EXCLUSIVE.every(function (x) { return tag === x || (p.tags || []).indexOf(x) < 0; }));
     });
     var lists = [];
-    if (tag) lists.push(base.filter(function (p) { return (p.tags || []).indexOf(tag) >= 0; }));
-    lists.push(base);
+    if (tag === '__sig') lists.push(base.filter(function (p) { return !!p.topics; }));
+    else {
+      if (tag) lists.push(base.filter(function (p) { return (p.tags || []).indexOf(tag) >= 0; }));
+      lists.push(base);
+    }
 
     for (var li = 0; li < lists.length; li++) {
       var cands = lists[li].slice();
@@ -589,11 +593,25 @@
         }
       }
       state.parts.push(s);
+      state.lastRole = role;
       state.text += s;
       state.ids[r.p.id] = 1;
       if (r.p.group) state.groups[r.p.group] = 1;
       (r.p.tags || []).forEach(function (t) { state.tags[t] = 1; });
     });
+
+    // 專屬梗補位：該主題有專屬句卻沒抽到時，高機率在結尾前補一句
+    var self2 = this;
+    if (state.mode === 'speech' && !style.needOther && state.parts.length > 1 && Math.random() < 0.7 &&
+        !Object.keys(state.ids).some(function (id) { var q = self2.byId && self2.byId[id]; return q && q.topics; })) {
+      var sg = this.pickSentence(ctx, 'support', '__sig', state) || this.pickSentence(ctx, 'core', '__sig', state);
+      if (sg) {
+        if (state.lastRole === 'close') state.parts.splice(state.parts.length - 1, 0, sg.text);
+        else state.parts.push(sg.text);
+        state.ids[sg.p.id] = 1;
+        state.text = state.parts.join('');
+      }
+    }
 
     // 低機率彩蛋
     // 彩蛋：已經說「謝謝」離場的回答不再補一句
