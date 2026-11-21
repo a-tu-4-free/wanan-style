@@ -38,7 +38,7 @@
     { id: 'debate',    name: '議會答詢型',     w: 1.4, seq: ['open', 'core:data', 'core:rebut2', 'support?', 'close:grand'] },
     { id: 'duty',      name: '責任承擔型',     w: 1.2, seq: ['open', 'core:duty', 'support:system', 'close:duty'] },
     { id: 'deflect',   name: '問A答B型',       w: 8, seq: ['open:cut', 'core:deflect', 'support:blame', 'close:deflect'] },
-    { id: 'other',     name: '這是別縣市的事型', w: 2, seq: ['open:other', 'core:other', 'core:deflect?', 'support:blame', 'close:other'], needOther: true },
+    { id: 'other',     name: '別縣市議題型', w: 2, seq: ['open:other', 'core:other', 'core:deflect?', 'support:otherS', 'close:other'], needOther: true },
     { id: 'h_other',   name: '強硬模式・別縣市型', w: 2, seq: ['open:hother', 'core:hother', 'close:hrebut'], mode: 'angry', needOther: true },
     { id: 'escape',    name: '逃跑型',         w: 3,   seq: ['open:escape', 'core:escape', 'support:escape?', 'close:escape'] },
     { id: 'law',       name: '亂套法律型',     w: 2.5, seq: ['open', 'core:law', 'support:law?', 'close'] },
@@ -304,9 +304,15 @@
     });
     Object.keys(cats).forEach(function (c) {
       var cd = self.cats[c] || self.general;
-      if (c !== 'general') keys.forEach(function (k) { add(k, cd.relations[k], hasTopic ? 0.2 : 2.5); });
+      if (c !== 'general' && !(cls.other && !hasTopic)) keys.forEach(function (k) { add(k, cd.relations[k], hasTopic ? 0.2 : 2.5); });
       if (!hasTopic && cls.hits.length === 1) ctx.verbs = ctx.verbs.concat(cd.verbs || []);
     });
+    // 問的是其他縣市的事件、又沒有收錄主題時，用「預算、經費」這類質疑用語
+    if (cls.other && !hasTopic) {
+      add('details', ['預算執行', '工程經費', '經費運用', '施工期程', '審計意見', '計畫效益'], 6);
+      add('organizations', ['審計單位', '中央主管機關', '議會'], 6);
+      add('problems', ['經費爭議', '執行效益', '預算浮編'], 6);
+    }
     keys.forEach(function (k) { add(k, self.general.relations[k], hasTopic ? 0.08 : 1); });
 
     if (absurd) {
@@ -426,6 +432,8 @@
         case 'act': return self.take(ctx, 'actions', 1)[0] || '處理';
         case 'out': case 'out2': return self.take(ctx, 'outcomes', 1)[0] || '品質提升';
         case 'ocity': return ctx.other ? ctx.other.city : '';
+        case 'ofig': return ctx.other ? ctx.other.city + ctx.other.name + ctx.other.figure : '';
+        case 'oline': return ctx.other ? ctx.other.line : '';
         case 'law': return ctx.law ? ctx.law.name : '相關法律';
         case 'lawline': return ctx.law ? ctx.law.line.replace(/\{topic\}/g, ctx.topic) : '確保市民權益';
         case 'dcity': return ctx.deflect ? ctx.deflect.city : '';
@@ -472,6 +480,9 @@
     if (p.cats && !ctx.cats.some(function (c) { return p.cats.indexOf(c) >= 0; })) return false;
     if (p.text.indexOf('{jobtitle}') >= 0 && !ctx.jobtitle) return false;
     if ((p.needOther || p.text.indexOf('{ocity}') >= 0) && !ctx.other) return false;
+    // 問其他縣市事件：萬安常拿來反問的（前鎮漁港等）借題發揮；其他的尊重地方自治
+    if (p.otherAttitude && ctx.other && p.otherAttitude !== (ctx.other.attitude || 'avoid')) return false;
+    if (p.needOfig && !(ctx.other && ctx.other.figure)) return false;
     // 問A答B 素材條件
     if (/\{d(city|name|fig|line)\}/.test(p.text)) {
       var dx = ctx.deflect;
@@ -542,6 +553,11 @@
     });
     // 主題設定 deflect_boost（如遮陽傘）時，大幅提高問A答B出現機率
     var boost = cls.hits.some(function (h) { return h.topic && h.topic.deflect_boost; });
+    // 問的是其他縣市的事件：大多直接用「別縣市議題」句型，避免講得像台北自己的工程
+    if (!style && cls.other && Math.random() < 0.85) {
+      var m0 = opts.mode || 'speech';
+      style = STYLES.filter(function (s) { return s.needOther && (s.mode || 'speech') === m0; })[0] || null;
+    }
     style = style || this.pickStyle(opts.avoidStyle, opts.mode, serious, boost, !!cls.other);
     var mode = style.mode || 'speech';
 
