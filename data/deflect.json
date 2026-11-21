@@ -1,5 +1,5 @@
 {
-  "version": "1.2",
+  "version": "1.3",
   "notes": "問A答B（議題轉移）素材庫。生成時依題目挑一筆相關素材（找不到就挑金額大的），用來「問台北答高雄」。文字只描述事件與公開數字，不做定罪；verification：verified＝已比對新聞報導，user_provided＝使用者提供、附來源待查證。；spin：缺失中有成果數字可以反轉（如 40 件中 36 件甲等）；司法案件只寫「遭起訴／檢方指控」，不寫成定罪；aliases：使用者直接輸入其他縣市的事件時（如「垃圾山」「前鎮漁港」），會觸發「這是別的縣市的事」回答",
   "items": [
     {"id": "X-04", "city": "高雄", "name": "前鎮漁港整建計畫", "figure": "81億元", "money": true, "central": true, "big": true, "line": "包括碼頭、魚市場還有船員會館", "match": ["遮陽傘", "公園", "市場", "預算", "工程", "漁", "港"], "cats": ["city", "politics"], "source": "https://www.cna.com.tw/news/acul/202308120030.aspx", "verification": "verified", "aliases": ["前鎮漁港"]},
@@ -10,7 +10,7 @@
     {"id": "K-14", "city": "高雄", "name": "驅趕野生動物的漆彈槍借用", "figure": "", "kind": "negative", "line": "後來也訂定了借用規範", "match": ["鴿", "流浪", "猴", "鼠", "動物", "蟑螂"], "cats": [], "source": "https://www.audit.gov.tw/p/412-1000-505.php?Lang=zh-tw", "verification": "user_provided"},
     {"id": "K-12", "city": "高雄", "name": "茄萣運動公園整改工程", "figure": "", "kind": "negative", "line": "受到施工介面影響，後來也已經重新開放", "match": ["公園", "運動", "工程", "施工"], "cats": [], "source": "https://www.audit.gov.tw/p/412-1000-505.php?Lang=zh-tw", "verification": "user_provided"},
     {"id": "T-08", "city": "台南", "name": "營養午餐油品事件", "figure": "20所學校", "kind": "negative", "line": "後來也提出中央廚房、檢驗設備及稽核人力的精進方案", "match": ["營養午餐", "食安", "學校", "鮮乳", "便當", "午餐"], "cats": ["food"], "source": "https://udn.com/news/story/124940/9661721", "verification": "user_provided", "aliases": ["問題油", "台南營養午餐"]},
-    {"id": "T-09", "city": "台南", "name": "烏山頭水庫光電板", "figure": "", "kind": "negative", "line": "也持續要求相關單位公開水質檢測", "match": ["電", "能源", "光電", "水", "空汙", "綠能"], "cats": [], "source": "https://udn.com/news/story/7314/9883258", "verification": "user_provided", "aliases": ["烏山頭"]},
+    {"id": "T-09", "city": "台南", "name": "烏山頭水庫光電板", "figure": "", "kind": "negative", "line": "也持續要求相關單位公開水質檢測", "match": ["電", "能源", "光電", "水", "空汙", "綠能", "水庫", "翡翠"], "cats": [], "source": "https://udn.com/news/story/7314/9883258", "verification": "user_provided", "aliases": ["烏山頭"]},
     {"id": "T-10", "city": "台南", "name": "雨水下水道", "figure": "約740公里、15座抽水站", "line": "這就是持續累積的成果", "match": ["淹水", "積水", "水溝", "漏水", "下雨", "颱風", "排水"], "cats": [], "source": "https://udn.com/news/story/6656/9716002", "verification": "user_provided"},
     {"id": "T-11", "city": "台南", "name": "公共自行車", "figure": "", "kind": "negative", "line": "尖峰時段也有供車不足的狀況", "match": ["youbike", "ubike", "自行車", "公車", "tpass", "捷運"], "cats": ["transport"], "source": "https://www.audit.gov.tw/p/412-1000-504.php?Lang=zh-tw", "verification": "user_provided"},
     {"id": "T-12", "city": "台南", "name": "安定區納骨堂工程", "figure": "", "kind": "negative", "line": "也因為地盤改良樁補強而延宕", "match": ["工程", "社宅", "都更", "巨蛋", "施工", "延宕"], "cats": [], "source": "https://www.audit.gov.tw/p/412-1000-504.php?Lang=zh-tw", "verification": "user_provided"},
@@ -36,6 +36,7 @@
     {"id": "P-20", "city": "屏東", "name": "優質公廁計畫", "figure": "", "kind": "negative", "line": "後來也提升了公廁特優級認證比例", "match": ["公廁", "廁所"], "cats": [], "source": "https://www.audit.gov.tw/p/412-1000-515.php?Lang=zh-tw", "verification": "user_provided"},
     {"id": "P-21", "city": "屏東", "name": "屏東書院園區", "figure": "", "kind": "negative", "line": "後來訂定工作綱要，也修正了管理維護計畫", "match": ["文化", "古蹟", "書院", "圖書館", "展"], "cats": [], "source": "https://www.audit.gov.tw/p/412-1000-515.php?Lang=zh-tw", "verification": "user_provided", "aliases": ["屏東書院"]},
     {"id": "C-01", "city": "台中", "name": "垃圾太空包", "figure": "估計約4.2萬公噸", "kind": "negative", "aliases": ["垃圾山", "垃圾太空包", "太空包"], "line": "市府說明是用打包方式暫置，焚化廠新廠也在興建中", "match": ["垃圾", "焚化", "回收", "廢棄物"], "cats": [], "source": "https://news.ltn.com.tw/amp/news/Taichung/breakingnews/5385113", "verification": "verified", "notes": "數字為議員估計"},
-    {"id": "C-02", "city": "台中", "name": "廚餘燕圾湖", "figure": "", "kind": "negative", "aliases": ["廚餘湖", "燕圾湖", "床墊長城"], "line": "也被議員質疑廢棄物處理量能不足", "match": ["廚餘", "垃圾", "床墊", "廢棄物"], "cats": [], "source": "https://news.ltn.com.tw/amp/news/Taichung/breakingnews/5444082", "verification": "verified"}
+    {"id": "C-02", "city": "台中", "name": "廚餘燕圾湖", "figure": "", "kind": "negative", "aliases": ["廚餘湖", "燕圾湖", "床墊長城"], "line": "也被議員質疑廢棄物處理量能不足", "match": ["廚餘", "垃圾", "床墊", "廢棄物"], "cats": [], "source": "https://news.ltn.com.tw/amp/news/Taichung/breakingnews/5444082", "verification": "verified"},
+    {"id": "K-19", "city": "高雄", "name": "阿公店水庫光電板", "figure": "", "kind": "negative", "aliases": ["阿公店"], "line": "水面上也設置了光電板", "match": ["水庫", "光電", "翡翠", "飲用水"], "cats": [], "source": "https://www.nownews.com/news/6893722", "verification": "reported", "notes": "台北市長記者會中提及"}
   ]
 }
