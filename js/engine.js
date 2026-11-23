@@ -140,7 +140,7 @@
   var STORE_KEY = 'wanan_recent_v1';
 
   // 只在指定時使用的標籤：absurd 荒謬混搭、civic 非市政題目的「市政化」開場
-  var EXCLUSIVE = ['absurd', 'civic', 'escape'];
+  var EXCLUSIVE = ['absurd', 'civic', 'escape', 'sorry'];
   var CIVIC_CATS = ['city', 'transport', 'politics'];
 
   /* ---------- 工具 ---------- */
