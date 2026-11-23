@@ -45,6 +45,9 @@
     { id: 'result',    name: '成果包裝型',     w: 2,   seq: ['open', 'core:result', 'support:result', 'close:result'] },
     { id: 'combo',     name: '逃跑×亂套型',    w: 2.5, seq: ['open:combo', 'core:law', 'core:result?', 'support:escape', 'close:escape'] },
     { id: 'cut',       name: '事件切割型',     w: 3,   seq: ['open:cut', 'core', 'support:blame', 'close'] },
+    { id: 'mystic',    name: '看穿幻象型',     w: 2,   seq: ['open:mystic', 'core:mystic', 'core', 'support:mystic', 'close:mystic'] },
+    { id: 'relay',     name: '一棒接一棒型',   w: 2,   seq: ['open:relay', 'core:relay', 'core', 'support:relay', 'close:relay'] },
+    { id: 'sorry',     name: '道歉SOP型',      w: 1.5, seq: ['open:sorry', 'core:sorry', 'support:sorry?', 'close:sorry'] },
     { id: 'news',      name: '新聞標題型',     w: 1.6, seq: ['open', 'core', 'core?', 'support', 'close'], patternMode: 'news', headline: true },
     // 動怒模式
     // 強硬模式（內部代號 angry）：六種語氣 + 綜合型
@@ -61,6 +64,12 @@
 
   // 同一段文字中的詞彙上限（D10 互斥規則）
   var LIMITS = [
+    { re: /幻象/g, max: 2 },
+    { re: /師傅不能換/g, max: 1, fixed: true },
+    { re: /一棒接一棒/g, max: 1, fixed: true },
+    { re: /表達歉意/g, max: 2, fixed: true },
+    { re: /既有基礎/g, max: 2 },
+    { re: /最大化/g, max: 3, fixed: true },
     { re: /即刻|立即|第一時間|隨即|當下/g, max: 2 },
     { re: /持續/g, max: 2 },
     { re: /第一時間/g, max: 1, fixed: true },
