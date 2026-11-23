@@ -53,6 +53,15 @@
     return w + rand(this.d.fallback_functions);
   };
 
+  // 「背熟○○的英文翻譯」：依議題挑一個最會被外媒追問的名詞
+  TitleEngine.prototype.pickEng = function (word) {
+    var w = String(word).toLowerCase();
+    var hit = (this.d.eng_terms || []).filter(function (e) {
+      return e.match.some(function (k) { return w.indexOf(k.toLowerCase()) >= 0; });
+    })[0];
+    return rand(hit ? hit.terms : (this.d.eng_default || ['跨局處']));
+  };
+
   TitleEngine.prototype.generate = function (input, opts) {
     opts = opts || {};
     var cls = this.engine.classify(input);
@@ -74,7 +83,8 @@
 
     var tier = opts.tier || (Math.random() < 0.6 ? 1 : 2);
     var title = this.makeTitle(stem, tier);
-    var fill = function (s) { return s.replace(/\{issue\}/g, issueWord).replace(/\{title\}/g, title); };
+    var eng = this.pickEng(issueWord);
+    var fill = function (s) { return s.replace(/\{issue\}/g, issueWord).replace(/\{title\}/g, title).replace(/\{eng\}/g, eng); };
 
     // 工作內容：議題專屬梗 2 則 + 通用梗 1 則
     // 只命中部分字（如「垃圾車音樂」只對到「垃圾車」）時，專屬梗只用 1 則，避免答非所問得太離譜
