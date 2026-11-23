@@ -519,7 +519,7 @@
     {"id": "bp3", "role": "support", "tags": ["result"], "text": "市民也可以提前預約未來20年的城市建設成果，實際完成時間將依工程進度滾動調整。", "light": true},
     {"id": "ym1", "role": "open", "tags": ["mystic"], "text": "{topic}的問題，我想大家要先看穿，它其實是一個幻象。"},
     {"id": "ym2", "role": "open", "tags": ["mystic"], "text": "很多人問{topic}什麼時候解決，我想先請大家不要被眼前的{d1}迷惑。"},
-    {"id": "ym3", "role": "core", "tags": ["mystic"], "text": "只要看穿洋流是個幻象，穩紮穩打，{topic}就會贏。", "basis": "reported_style", "group": "yangliu"},
+    {"id": "ym3", "role": "core", "tags": ["mystic"], "text": "{topic}也是一樣，只要看穿洋流是個幻象，穩紮穩打就會贏。", "basis": "reported_style", "group": "yangliu"},
     {"id": "ym4", "role": "core", "tags": ["mystic"], "text": "{d1}看起來是問題，但只要用智慧去理解，它就不再是問題。"},
     {"id": "ym5", "role": "support", "tags": ["mystic", "escape"], "text": "至於具體期程，這個需要用智慧去理解。"},
     {"id": "ym6", "role": "support", "tags": ["mystic"], "text": "我也建議相關局處同仁，可以讀一下《金剛經》，很多{topic}的執著自然就會放下。", "group": "sutra"},
